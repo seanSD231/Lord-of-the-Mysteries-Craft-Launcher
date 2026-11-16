@@ -8,6 +8,7 @@ mod fetch;
 mod java;
 mod manifest;
 mod mojang;
+mod neoforge;
 mod policy;
 mod sync;
 
@@ -27,6 +28,7 @@ lotmcraft {version}
   lotmcraft verify --root <dir> --manifest <url|file>
   lotmcraft java   --root <dir>
   lotmcraft game   --root <dir> [--mc <version>]
+  lotmcraft install --root <dir> --manifest <url|file>
 
   --root      the instance folder, the one holding mods/
   --manifest  https://... or a local manifest.json
@@ -173,6 +175,51 @@ fn main() -> Result<()> {
         if m.neoforge.is_empty() { "-" } else { &m.neoforge }
     );
     println!("{} files in the manifest\n", m.files.len());
+
+    if args.cmd == "install" {
+        let base = args.root.join(".lotmcraft");
+        let mut last = u64::MAX;
+        let mut pct = |done: u64, total: u64| {
+            let p = (done * 100).checked_div(total).unwrap_or(0);
+            if p != last {
+                last = p;
+                print!("\r  {p}%   ");
+                let _ = std::io::stdout().flush();
+            }
+        };
+
+        println!("1/4  Java runtime");
+        let rt = java::ensure(&base.join("runtime"), &mut pct)?;
+        println!("\r     {}", rt.version()?.lines().next().unwrap_or("ready"));
+
+        println!("2/4  Minecraft {}", m.minecraft);
+        let game = mojang::install(&base, &m.minecraft, |s| println!("     {s}"), &mut pct)?;
+        println!("\r     client.jar and {} libraries", game.libraries.len());
+
+        if m.neoforge.is_empty() {
+            bail!("the manifest does not say which NeoForge version to install");
+        }
+        println!("3/4  NeoForge {}", m.neoforge);
+        let nf = neoforge::install(&base, &rt, &m.neoforge, |s| println!("     {s}"), &mut pct)?;
+        println!("\r     {}", nf.version_id);
+
+        println!("4/4  pack files");
+        let plan = sync::plan(&m, &args.root)?;
+        if plan.is_empty() {
+            println!("     already up to date");
+        } else {
+            let mut on_file = |path: &str, i: usize, n: usize| println!("     [{i}/{n}] {path}");
+            let mut on_bytes = |_: u64, _: u64| {};
+            let mut progress = sync::Progress {
+                on_file: &mut on_file,
+                on_bytes: &mut on_bytes,
+            };
+            sync::apply(&m, &args.root, &plan, &mut progress)?;
+        }
+
+        println!("\ninstalled. the game is not launchable yet -- that is the next piece.");
+        return Ok(());
+    }
 
     match args.cmd.as_str() {
         "verify" => {
