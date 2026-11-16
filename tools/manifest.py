@@ -134,6 +134,26 @@ def main():
         cf, blocked, cf_mc, cf_loader = from_curseforge(inst)
         print(f"  {len(cf)} mods linked from CurseForge, {len(blocked)} with distribution turned off", file=sys.stderr)
 
+    # CurseForge does not always record a hash. Without one the launcher cannot verify a
+    # download, so hash the jar off disk instead; it is sitting in mods/ already.
+    unhashed = [e for e in cf if not e.get("sha1")]
+    if unhashed:
+        print(f"  {len(unhashed)} mod(s) had no hash from CurseForge; hashing off disk", file=sys.stderr)
+        missing = []
+        for e in unhashed:
+            local = os.path.join(a.root, e["path"])
+            if os.path.isfile(local):
+                e["sha1"] = sha1_of(local)
+                e["size"] = e["size"] or os.path.getsize(local)
+            else:
+                missing.append(e["path"])
+        if missing:
+            print(f"  ! {len(missing)} not on disk and still unhashed:", file=sys.stderr)
+            for m in missing[:10]:
+                print(f"      {m}", file=sys.stderr)
+            sys.exit("refusing to write a manifest with unverifiable files; "
+                     "run this from the instance folder so the jars can be hashed")
+
     folders = [f.strip() for f in a.folders.split(",") if f.strip()]
     if cf:
         folders = [f for f in folders if f != "mods"]      # CurseForge already told us about mods/
