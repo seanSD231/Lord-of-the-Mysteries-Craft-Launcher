@@ -14,3 +14,4 @@ pub mod neoforge;
 pub mod ping;
 pub mod policy;
 pub mod sync;
+pub mod update;

@@ -7,7 +7,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use anyhow::{Context, Result};
-use lotmcraft::{auth, fetch, java, launch, manifest::Manifest, mojang, neoforge, ping, sync};
+use lotmcraft::{auth, fetch, java, launch, manifest::Manifest, mojang, neoforge, ping, sync, update};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -43,6 +43,13 @@ impl Ctx {
     }
 }
 
+/// The pathway the mod last wrote, if the player has been in game.
+fn game_pathway(base: &std::path::Path) -> Option<String> {
+    let bytes = std::fs::read(base.join("pathway.json")).ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    v["pathway"].as_str().filter(|s| !s.is_empty()).map(|s| s.to_string())
+}
+
 #[derive(Serialize)]
 struct Status {
     pack_name: String,
@@ -54,6 +61,7 @@ struct Status {
     installed: bool,
     offline_allowed: bool,
     username: Option<String>,
+    game_pathway: Option<String>,
 }
 
 /// Errors cross into JavaScript as strings; anyhow's chain is what makes them useful.
@@ -84,6 +92,7 @@ fn status(ctx: State<'_, Ctx>) -> Result<Status, String> {
                 installed: ctx.base().join("versions").is_dir(),
                 offline_allowed: launch::offline_allowed(&ctx.base()),
                 username: saved_username(&ctx.base()),
+                game_pathway: game_pathway(&ctx.base()),
             }
         }
         Err(_) => return Err("internal state was poisoned; restart the launcher".into()),
@@ -224,6 +233,30 @@ fn load_prefs(ctx: State<'_, Ctx>) -> serde_json::Value {
 }
 
 #[tauri::command]
+async fn check_update() -> Option<update::Available> {
+    tauri::async_runtime::spawn_blocking(update::check).await.ok().flatten()
+}
+
+#[tauri::command]
+async fn apply_update(app: AppHandle) -> Result<(), String> {
+    let a = app.clone();
+    let exe = tauri::async_runtime::spawn_blocking(move || {
+        update::apply(|done, total| {
+            let _ = a.emit("progress", serde_json::json!({"done": done, "total": total}));
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(fail)?;
+
+    std::process::Command::new(exe)
+        .spawn()
+        .map_err(|e| format!("the update installed but would not start: {e}"))?;
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
 fn quit(app: AppHandle) {
     app.exit(0);
 }
@@ -349,6 +382,9 @@ async fn play(
 }
 
 fn main() {
+    // an earlier update left its predecessor beside us; nothing runs from it now
+    update::clean_old();
+
     tauri::Builder::default()
         .setup(|app| {
             // the instance folder is where the launcher lives, so a player can move the
@@ -379,6 +415,8 @@ fn main() {
             server_status,
             save_prefs,
             load_prefs,
+            check_update,
+            apply_update,
             pathway_icons
         ])
         .run(tauri::generate_context!())

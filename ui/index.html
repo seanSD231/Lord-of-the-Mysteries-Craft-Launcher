@@ -204,6 +204,11 @@ footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
           <input type="number" id="memNum" min="1024" max="131072" step="256" value="6144">
         </div>
       </div>
+      <div class="box hidden" id="updBox" style="border-color:var(--accent)">
+        <h2><i></i>UPDATE</h2>
+        <div class="statusline" id="updText" style="white-space:normal"></div>
+        <span class="bw" style="margin-top:7px"><button id="btnUpdate">Install &amp; Restart</button></span>
+      </div>
       <div class="box grow" style="display:flex;flex-direction:column;justify-content:flex-end">
         <div class="statusline" id="statusLine">checking what is installed...</div>
         <div class="bar"><i id="bar"></i></div>
@@ -265,7 +270,7 @@ const PATHWAYS = [
   ["monster","Monster","Wheel of Fortune","#aaaaaa"]
 ];
 
-let prefs = { pathway: 12, memory: 6144 };
+let prefs = { pathway: 12, memory: 6144, manual: false };
 
 function mix(hex, t, toward) {
   const n = parseInt(hex.slice(1), 16);
@@ -293,7 +298,7 @@ PATHWAYS.forEach((p, i) => {
   el.innerHTML = '<img src="pathway/' + p[0] + '.png" alt="">' +
                  '<div class="nm">' + p[1] + '</div>' +
                  '<div class="s0">' + p[2] + '</div>';
-  el.onclick = () => { applyPathway(i); savePrefs(); };
+  el.onclick = () => { prefs.manual = true; applyPathway(i); savePrefs(); };
   $('grid').appendChild(el);
 });
 
@@ -354,6 +359,11 @@ async function refresh() {
     $('btnLogin').parentElement.classList.toggle('hidden', !!s.username);
     $('btnLogout').parentElement.classList.toggle('hidden', !s.username);
     $('devWrap').classList.toggle('hidden', !s.offline_allowed);
+    // the mod writes the player's pathway out; follow it unless one was chosen here
+    if (!prefs.manual && s.game_pathway) {
+      const i = PATHWAYS.findIndex(p => p[0] === s.game_pathway);
+      if (i >= 0 && i !== prefs.pathway) applyPathway(i);
+    }
     offlineReady();
     setStatus(s.installed ? 'ready' : 'first run -- Play installs everything');
   } catch (e) { setStatus(String(e), true); }
@@ -399,6 +409,12 @@ $('btnVerify').onclick = async () => {
   } catch (e) { setStatus(String(e), true); }
   setBusy(false);
 };
+$('btnUpdate').onclick = async () => {
+  setBusy(true);
+  setStatus('downloading the update');
+  try { await invoke('apply_update'); }
+  catch (e) { setStatus(String(e), true); setBusy(false); }
+};
 $('btnFolder').onclick = () => invoke('open_folder');
 $('btnQuit').onclick = () => invoke('quit');
 
@@ -407,12 +423,22 @@ $('btnQuit').onclick = () => invoke('quit');
     const saved = await invoke('load_prefs');
     if (typeof saved.pathway === 'number') prefs.pathway = saved.pathway;
     if (typeof saved.memory === 'number') prefs.memory = saved.memory;
+    if (saved.manual === true) prefs.manual = true;
   } catch (e) {}
   applyPathway(prefs.pathway);
   $('mem').value = Math.min(prefs.memory, 65536);
   $('memNum').value = prefs.memory;
   $('memVal').textContent = prefs.memory;
   refresh(); pingServer(); setInterval(pingServer, 30000);
+
+  try {
+    const up = await invoke('check_update');
+    if (up) {
+      $('updText').textContent = 'version ' + up.version + ' is available'
+        + (up.notes ? ' - ' + up.notes : '');
+      $('updBox').classList.remove('hidden');
+    }
+  } catch (e) {}
 })();
 </script>
 </body>
