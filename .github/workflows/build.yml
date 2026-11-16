@@ -63,3 +63,25 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}
+
+  # A build with offline profiles enabled, for testing before the Microsoft app is
+  # approved. Deliberately not attached to any release: it is an Actions artifact that
+  # expires, not something a player can stumble into downloading.
+  dev:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: dev-offline
+      - name: Build
+        run: cargo build --release --features dev-offline
+      - name: Stage
+        shell: bash
+        run: cp target/release/lotmcraft.exe lotmcraft-dev-windows-x64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lotmcraft-dev-windows-x64.exe
+          path: lotmcraft-dev-windows-x64.exe
