@@ -330,15 +330,27 @@ pub fn build_command(opts: &LaunchOptions, natives: &[PathBuf]) -> Result<Comman
             }
         }
     }
-    let root_id = chain
-        .last()
-        .and_then(|v| v.get("id"))
-        .and_then(|x| x.as_str())
-        .unwrap_or("")
-        .to_string();
-    let client_jar = paths.version_dir(&root_id).join(format!("{root_id}.jar"));
-    if client_jar.is_file() {
-        cp.push(client_jar.to_string_lossy().to_string());
+    // NeoForge 1.20.2+ ships its own patched Minecraft as a library, so the vanilla jar
+    // must not be added as well: the JVM would see two modules exporting the same
+    // packages (the vanilla jar becomes an automatic module named after its filename,
+    // _1._21._1) and refuse to resolve. Only add it when nothing else supplies one.
+    let minecraft_from_libraries = m.libraries.iter().any(|lib| {
+        lib["name"]
+            .as_str()
+            .map(|n| n.starts_with("net.minecraft:client") || n.starts_with("net.minecraft:joined"))
+            .unwrap_or(false)
+    });
+    if !minecraft_from_libraries {
+        let root_id = chain
+            .last()
+            .and_then(|v| v.get("id"))
+            .and_then(|x| x.as_str())
+            .unwrap_or("")
+            .to_string();
+        let client_jar = paths.version_dir(&root_id).join(format!("{root_id}.jar"));
+        if client_jar.is_file() {
+            cp.push(client_jar.to_string_lossy().to_string());
+        }
     }
 
     let mut vars: BTreeMap<String, String> = BTreeMap::new();
@@ -534,6 +546,21 @@ mod tests {
         assert!(set.contains("securejarhandler-3.0.8.jar"));
         assert!(set.contains("asm-9.7.jar"));
         assert_eq!(set.len(), 3);
+    }
+
+    #[test]
+    fn neoforge_supplies_its_own_minecraft() {
+        let libs = vec![
+            serde_json::json!({"name": "net.minecraft:client:1.21.1-20240808.144430:srg"}),
+            serde_json::json!({"name": "org.lwjgl:lwjgl:3.3.3"}),
+        ];
+        let supplied = libs.iter().any(|lib| {
+            lib["name"]
+                .as_str()
+                .map(|n| n.starts_with("net.minecraft:client"))
+                .unwrap_or(false)
+        });
+        assert!(supplied, "the vanilla jar must not be added alongside this");
     }
 
     #[test]
