@@ -1,0 +1,129 @@
+name: Release launcher
+
+# Push a tag to ship an update to every player:
+#
+#   (bump version in Cargo.toml, commit)
+#   git tag launcher-v0.2.0 && git push origin launcher-v0.2.0
+#
+# Builds every platform, writes launcher.json with a SHA-256 per binary, and replaces
+# the assets on the launcher-latest release. Running launchers read that file on
+# startup, see the newer version and offer it.
+on:
+  push:
+    tags: ["launcher-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows-x64
+            bin: lotmcraft-gui.exe
+            asset: lotmcraft-gui-windows-x64.exe
+          - os: macos-latest
+            target: macos-arm64
+            bin: lotmcraft-gui
+            asset: lotmcraft-gui-macos-arm64
+          - os: macos-13
+            target: macos-x64
+            bin: lotmcraft-gui
+            asset: lotmcraft-gui-macos-x64
+          - os: ubuntu-latest
+            target: linux-x64
+            bin: lotmcraft-gui
+            asset: lotmcraft-gui-linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Tauri system dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+      # The player binaries never carry dev-offline: that feature exists so testing can
+      # happen before Microsoft approval, and it must not reach anyone else.
+      - name: Build
+        run: cargo build --release --features gui --bin lotmcraft-gui
+      - name: Stage
+        shell: bash
+        run: cp "target/release/${{ matrix.bin }}" "${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ matrix.asset }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Write launcher.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          tag="${GITHUB_REF_NAME#launcher-v}"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$tag" != "$version" ]; then
+            echo "::error::tag launcher-v$tag does not match Cargo.toml version $version"
+            exit 1
+          fi
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/launcher-latest"
+          {
+            echo "{"
+            echo "  \"version\": \"$version\","
+            echo "  \"notes\": \"\","
+            echo "  \"builds\": ["
+            first=1
+            for pair in \
+              "windows-x64:lotmcraft-gui-windows-x64.exe" \
+              "macos-arm64:lotmcraft-gui-macos-arm64" \
+              "macos-x64:lotmcraft-gui-macos-x64" \
+              "linux-x64:lotmcraft-gui-linux-x64"; do
+              target="${pair%%:*}"; file="${pair#*:}"
+              [ -f "dist/$file" ] || continue
+              sha=$(sha256sum "dist/$file" | cut -d' ' -f1)
+              size=$(stat -c%s "dist/$file")
+              [ $first -eq 1 ] || echo ","
+              first=0
+              printf '    {"target": "%s", "url": "%s/%s", "sha256": "%s", "size": %s}' \
+                "$target" "$base" "$file" "$sha" "$size"
+            done
+            echo
+            echo "  ]"
+            echo "}"
+          } > dist/launcher.json
+          cat dist/launcher.json
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          # launcher-latest is a moving tag: the feed url never changes, so a launcher
+          # from any version knows where to look.
+          if ! gh release view launcher-latest >/dev/null 2>&1; then
+            gh release create launcher-latest --title "Launcher (latest)" \
+              --notes "The current launcher. Assets here are replaced on every release."
+          fi
+          gh release upload launcher-latest dist/* --clobber
+          # and an immutable tag, so an old version can be fetched if one goes wrong
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --title "Launcher v$version" --notes "" || \
+              gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          fi
