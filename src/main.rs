@@ -4,15 +4,7 @@
 //! exercised and debugged without a UI in the way, and so a broken install can be fixed
 //! over a support chat with one command.
 
-mod auth;
-mod fetch;
-mod java;
-mod launch;
-mod manifest;
-mod mojang;
-mod neoforge;
-mod policy;
-mod sync;
+use lotmcraft::{auth, fetch, java, launch, manifest, mojang, neoforge, sync};
 
 use anyhow::{bail, Context, Result};
 use manifest::Manifest;

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lord of the Mysteries Craft</title>
+<style>
+  /* The palette is LOTM's own reworked GUI: near-black panels, metallic gold,
+     cool grey for anything secondary. The launcher should look like it belongs
+     beside the mod rather than like a separate program. */
+  :root {
+    --ink:      #0a080c;
+    --panel:    #14101 8;
+    --panel:    #141018;
+    --panel-2:  #1c1822;
+    --gold:     #d4af37;
+    --gold-hi:  #f3dc8a;
+    --bronze:   #7a5c1e;
+    --grey:     #a0a8b4;
+    --grey-dim: #5a606c;
+    --bad:      #c05a4a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--ink);
+    color: var(--grey);
+    font: 13px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+    user-select: none;
+    overflow: hidden;
+  }
+  /* the faint diagonal weave LOTM's panels carry */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(45deg,
+      transparent 0 12px, rgba(255,255,255,.012) 12px 13px);
+  }
+  .wrap { height: 100%; display: flex; flex-direction: column; }
+
+  header {
+    position: relative; padding: 22px 28px 18px;
+    background: var(--panel-2);
+    border-bottom: 2px solid var(--gold);
+  }
+  /* the slanted lit plate behind the title */
+  header::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 330px;
+    background: #2a2210;
+    clip-path: polygon(26px 0, 100% 0, calc(100% - 26px) 100%, 0 100%);
+  }
+  header h1, header .sub { position: relative; }
+  header h1 {
+    margin: 0; font: 600 22px/1.2 Georgia, "Times New Roman", serif;
+    color: var(--gold-hi); letter-spacing: .4px;
+  }
+  header .sub { margin-top: 3px; font-size: 11px; color: var(--grey-dim); }
+  header .ver {
+    position: absolute; right: 28px; top: 24px; text-align: right;
+  }
+  header .ver b { display: block; color: var(--gold); font-size: 17px; font-weight: 600; }
+  header .ver span { font-size: 10px; letter-spacing: .14em; color: var(--grey-dim); }
+
+  main { flex: 1; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+  .row { display: flex; gap: 14px; align-items: stretch; }
+  .card {
+    flex: 1; background: var(--panel); border: 1px solid #272232;
+    padding: 14px 16px;
+  }
+  .card h2 {
+    margin: 0 0 8px; font: 600 10px/1 system-ui, sans-serif;
+    letter-spacing: .16em; color: var(--grey-dim);
+  }
+  .card .big { color: var(--gold-hi); font-size: 15px; }
+  .card .note { font-size: 11px; color: var(--grey-dim); margin-top: 4px; }
+
+  label { display: block; font-size: 11px; color: var(--grey-dim); margin-bottom: 5px; }
+  input[type=text], input[type=number] {
+    width: 100%; background: #0d0b11; border: 1px solid #2b2638;
+    color: var(--grey); padding: 7px 9px; font: inherit;
+  }
+  input:focus { outline: none; border-color: var(--bronze); }
+  input[type=range] { width: 100%; accent-color: var(--gold); }
+
+  .play {
+    position: relative; margin-top: auto;
+    display: flex; align-items: center; gap: 16px;
+  }
+  button.go {
+    position: relative; border: 1px solid var(--gold);
+    background: #2a2210; color: var(--gold-hi);
+    font: 600 14px/1 system-ui, sans-serif; letter-spacing: .18em;
+    padding: 16px 44px; cursor: pointer;
+    clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    transition: background .15s, color .15s;
+  }
+  button.go:hover:not(:disabled) { background: #3a2f14; color: #fff3c8; }
+  button.go:disabled { opacity: .45; cursor: default; }
+
+  button.plain {
+    background: none; border: 1px solid #2b2638; color: var(--grey-dim);
+    padding: 7px 14px; font: inherit; cursor: pointer;
+  }
+  button.plain:hover { border-color: var(--bronze); color: var(--grey); }
+
+  .status { flex: 1; min-width: 0; }
+  .status .line {
+    font-size: 12px; color: var(--grey);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .status .line.err { color: var(--bad); white-space: normal; }
+  .bar {
+    margin-top: 7px; height: 4px; background: #16121c; overflow: hidden;
+  }
+  .bar i {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--bronze), var(--gold-hi));
+    transition: width .2s;
+  }
+
+  footer {
+    padding: 10px 28px; border-top: 1px solid #221d2c;
+    background: var(--panel-2);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; color: var(--grey-dim); letter-spacing: .1em;
+  }
+  footer a { color: var(--grey-dim); text-decoration: none; cursor: pointer; }
+  footer a:hover { color: var(--gold); }
+
+  .hidden { display: none !important; }
+  code { color: var(--gold-hi); font-size: 15px; letter-spacing: .1em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1 id="packName">Lord of the Mysteries Craft</h1>
+    <div class="sub" id="packSub">reading the manifest…</div>
+    <div class="ver"><b id="packVer">—</b><span>PACK VERSION</span></div>
+  </header>
+
+  <main>
+    <div class="row">
+      <div class="card">
+        <h2>ACCOUNT</h2>
+        <div class="big" id="accName">not signed in</div>
+        <div class="note" id="accNote">sign in with the Microsoft account that owns Minecraft</div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button class="plain" id="btnLogin">Sign in</button>
+          <button class="plain hidden" id="btnLogout">Sign out</button>
+        </div>
+      </div>
+      <div class="card" id="devCard" style="max-width:250px;">
+        <h2>OFFLINE PROFILE</h2>
+        <label for="devName">username</label>
+        <input type="text" id="devName" value="dev1" spellcheck="false">
+        <div class="note">for testing against your own server</div>
+      </div>
+      <div class="card" style="max-width:210px;">
+        <h2>MEMORY</h2>
+        <div class="big"><span id="memVal">6144</span> MB</div>
+        <input type="range" id="mem" min="2048" max="16384" step="512" value="6144">
+        <div class="note">230 mods want 6 GB or more</div>
+      </div>
+    </div>
+
+    <div class="play">
+      <button class="go" id="btnPlay" disabled>PLAY</button>
+      <div class="status">
+        <div class="line" id="statusLine">checking what is installed…</div>
+        <div class="bar"><i id="bar"></i></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span id="footLeft">—</span>
+    <span><a id="btnFolder">OPEN FOLDER</a> &nbsp;·&nbsp; <a id="btnVerify">VERIFY FILES</a></span>
+  </footer>
+
+</div>
+
+<script>
+const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args || {});
+const listen = (ev, fn) => window.__TAURI__.event.listen(ev, fn);
+
+const $ = id => document.getElementById(id);
+let busy = false;
+
+function setStatus(text, isError) {
+  const l = $('statusLine');
+  l.textContent = text;
+  l.classList.toggle('err', !!isError);
+}
+function setProgress(done, total) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  $('bar').style.width = pct + '%';
+}
+function setBusy(b) {
+  busy = b;
+  $('btnPlay').disabled = b;
+  $('btnLogin').disabled = b;
+}
+
+listen('status', e => setStatus(e.payload));
+listen('progress', e => setProgress(e.payload.done, e.payload.total));
+listen('failed', e => { setStatus(e.payload, true); setProgress(0, 1); setBusy(false); });
+
+async function refresh() {
+  try {
+    const s = await invoke('status');
+    $('packName').textContent = s.pack_name;
+    $('packVer').textContent = s.pack_version;
+    $('packSub').textContent =
+      `Minecraft ${s.minecraft} · NeoForge ${s.neoforge} · ${s.file_count} files`;
+    $('footLeft').textContent = s.root;
+
+    if (s.username) {
+      $('accName').textContent = s.username;
+      $('accNote').textContent = 'signed in';
+      $('btnLogin').classList.add('hidden');
+      $('btnLogout').classList.remove('hidden');
+    } else {
+      $('accName').textContent = 'not signed in';
+      $('btnLogin').classList.remove('hidden');
+      $('btnLogout').classList.add('hidden');
+    }
+    $('devCard').classList.toggle('hidden', !s.offline_allowed);
+
+    $('btnPlay').disabled = false;
+    setStatus(s.installed ? 'ready' : 'first run — Play will install everything');
+  } catch (e) {
+    setStatus(String(e), true);
+  }
+}
+
+$('mem').addEventListener('input', e => { $('memVal').textContent = e.target.value; });
+
+$('btnLogin').onclick = async () => {
+  setBusy(true);
+  try {
+    await invoke('login');
+    await refresh();
+  } catch (e) { setStatus(String(e), true); }
+  setBusy(false);
+};
+
+$('btnLogout').onclick = async () => {
+  await invoke('logout');
+  await refresh();
+};
+
+$('btnPlay').onclick = async () => {
+  setBusy(true);
+  setProgress(0, 1);
+  try {
+    await invoke('play', {
+      memoryMb: parseInt($('mem').value, 10),
+      offlineName: $('devCard').classList.contains('hidden') ? null : $('devName').value.trim(),
+    });
+    setStatus('the game is running');
+  } catch (e) {
+    setStatus(String(e), true);
+  }
+  setBusy(false);
+};
+
+$('btnVerify').onclick = async () => {
+  setBusy(true);
+  try {
+    const bad = await invoke('verify_files');
+    setStatus(bad.length === 0 ? 'every file matches' : `${bad.length} file(s) differ`);
+  } catch (e) { setStatus(String(e), true); }
+  setBusy(false);
+};
+
+$('btnFolder').onclick = () => invoke('open_folder');
+
+// the sign-in prompt arrives as an event, since it appears mid-flow
+listen('device_code', e => {
+  setStatus(`open ${e.payload.url} and enter ${e.payload.code}`);
+});
+
+refresh();
+</script>
+</body>
+</html>

@@ -12,6 +12,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+      - name: Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
       - uses: Swatinem/rust-cache@v2
       - name: Test
         run: cargo test --all --verbose
@@ -21,6 +26,8 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: Clippy with dev-offline
         run: cargo clippy --all-targets --features dev-offline -- -D warnings
+      - name: Check the gui builds
+        run: cargo clippy --features gui --bin lotmcraft-gui -- -D warnings
 
   build:
     needs: check
@@ -85,3 +92,22 @@ jobs:
         with:
           name: lotmcraft-dev-windows-x64.exe
           path: lotmcraft-dev-windows-x64.exe
+
+  gui:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gui
+      - name: Build
+        run: cargo build --release --features "gui,dev-offline" --bin lotmcraft-gui
+      - name: Stage
+        shell: bash
+        run: cp target/release/lotmcraft-gui.exe lotmcraft-gui-windows-x64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lotmcraft-gui-windows-x64.exe
+          path: lotmcraft-gui-windows-x64.exe
