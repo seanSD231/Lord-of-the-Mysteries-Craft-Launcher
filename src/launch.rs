@@ -304,7 +304,8 @@ pub fn build_command(opts: &LaunchOptions, natives: &[PathBuf]) -> Result<Comman
     let natives_dir = paths.version_dir(&m.version_id).join("natives");
     extract_natives(natives, &natives_dir).context("unpacking native libraries")?;
 
-    // classpath: every applicable library, then the vanilla client jar
+    // classpath: every applicable library, then the vanilla client jar.
+    // Filtered below: anything NeoForge puts on the module path must not also be here.
     let mut cp: Vec<String> = Vec::new();
     for lib in &m.libraries {
         let rules: Vec<mojang::Rule> = lib
@@ -371,9 +372,26 @@ pub fn build_command(opts: &LaunchOptions, natives: &[PathBuf]) -> Result<Comman
         paths.libraries().to_string_lossy().to_string(),
     );
     vars.insert("classpath_separator".into(), sep.into());
-    vars.insert("classpath".into(), cp.join(sep));
     vars.insert("launcher_name".into(), LAUNCHER_NAME.into());
     vars.insert("launcher_version".into(), env!("CARGO_PKG_VERSION").into());
+
+    // Expand the jvm arguments before the classpath exists, because they are what say
+    // which jars go on the module path. ${classpath} has no value yet and is left as
+    // written, to be filled in once the filtering is done.
+    let jvm_raw: Vec<String> = m.jvm_args.iter().flat_map(|e| expand(e, &vars)).collect();
+
+    // A jar on the module path must not also be on the class path: the JVM rejects it
+    // with "module X was already on the module path but class-path contains it".
+    let on_module_path = module_path_entries(&jvm_raw, sep);
+    if !on_module_path.is_empty() {
+        cp.retain(|entry| {
+            Path::new(entry)
+                .file_name()
+                .map(|n| !on_module_path.contains(&n.to_string_lossy().to_string()))
+                .unwrap_or(true)
+        });
+    }
+    vars.insert("classpath".into(), cp.join(sep));
 
     let mut cmd = Command::new(&opts.java.java);
     cmd.arg(format!("-Xmx{}M", opts.memory_mb));
@@ -382,10 +400,9 @@ pub fn build_command(opts: &LaunchOptions, natives: &[PathBuf]) -> Result<Comman
         cmd.arg(a);
     }
 
-    let mut jvm: Vec<String> = m
-        .jvm_args
+    let mut jvm: Vec<String> = jvm_raw
         .iter()
-        .flat_map(|e| expand(e, &vars))
+        .map(|a| substitute(a, &vars))
         .collect();
     if jvm.is_empty() {
         // a version json with no jvm arguments at all predates 1.13
@@ -414,6 +431,36 @@ pub fn build_command(opts: &LaunchOptions, natives: &[PathBuf]) -> Result<Comman
     cmd.current_dir(opts.game_dir);
     cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     Ok(cmd)
+}
+
+/// The file names listed after `-p` / `--module-path` in the expanded jvm arguments.
+///
+/// NeoForge builds that value from ${library_directory}, so it is already a real list of
+/// paths by this point. Matching on file name rather than full path avoids separator and
+/// case differences on Windows.
+fn module_path_entries(jvm: &[String], sep: &str) -> std::collections::BTreeSet<String> {
+    let mut out = std::collections::BTreeSet::new();
+    let mut i = 0;
+    while i < jvm.len() {
+        let a = jvm[i].as_str();
+        let value = if a == "-p" || a == "--module-path" {
+            i += 1;
+            jvm.get(i).map(|s| s.as_str())
+        } else if let Some(rest) = a.strip_prefix("--module-path=") {
+            Some(rest)
+        } else {
+            None
+        };
+        if let Some(v) = value {
+            for part in v.split(sep) {
+                if let Some(name) = Path::new(part).file_name() {
+                    out.insert(name.to_string_lossy().to_string());
+                }
+            }
+        }
+        i += 1;
+    }
+    out
 }
 
 /// `group:artifact:version[:classifier]` to the path Maven would store it at.
@@ -474,6 +521,21 @@ mod tests {
         assert_eq!(m.asset_index, "17");
         assert_eq!(m.libraries.len(), 2);
         assert_eq!(m.libraries[0]["name"], "com.google.guava:guava:33.0.0");
+    }
+
+    #[test]
+    fn module_path_entries_are_found_in_both_forms() {
+        let sep = ";";
+        let jvm = vec![
+            "-p".to_string(),
+            "C:/l/bootstraplauncher-2.0.2.jar;C:/l/securejarhandler-3.0.8.jar".to_string(),
+            "--module-path=C:/l/asm-9.7.jar".to_string(),
+        ];
+        let set = module_path_entries(&jvm, sep);
+        assert!(set.contains("bootstraplauncher-2.0.2.jar"));
+        assert!(set.contains("securejarhandler-3.0.8.jar"));
+        assert!(set.contains("asm-9.7.jar"));
+        assert_eq!(set.len(), 3);
     }
 
     #[test]
