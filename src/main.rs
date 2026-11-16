@@ -4,6 +4,7 @@
 //! exercised and debugged without a UI in the way, and so a broken install can be fixed
 //! over a support chat with one command.
 
+mod auth;
 mod fetch;
 mod java;
 mod manifest;
@@ -29,6 +30,8 @@ lotmcraft {version}
   lotmcraft java   --root <dir>
   lotmcraft game   --root <dir> [--mc <version>]
   lotmcraft install --root <dir> --manifest <url|file>
+  lotmcraft login  --root <dir>
+  lotmcraft logout --root <dir>
 
   --root      the instance folder, the one holding mods/
   --manifest  https://... or a local manifest.json
@@ -69,7 +72,7 @@ fn parse_args() -> Args {
             }
         }
     }
-    let needs_manifest = !matches!(cmd.as_str(), "java" | "game");
+    let needs_manifest = !matches!(cmd.as_str(), "java" | "game" | "login" | "logout");
     match (root, manifest) {
         (Some(r), m) if m.is_some() || !needs_manifest => Args {
             cmd,
@@ -119,6 +122,27 @@ fn main() -> Result<()> {
     let args = parse_args();
     if !args.root.is_dir() {
         bail!("{} is not a folder", args.root.display());
+    }
+
+    if args.cmd == "logout" {
+        auth::sign_out(&args.root.join(".lotmcraft"))?;
+        println!("signed out");
+        return Ok(());
+    }
+
+    if args.cmd == "login" {
+        let base = args.root.join(".lotmcraft");
+        let s = auth::sign_in(
+            &base,
+            |url, code| {
+                println!("\n  Open {url}");
+                println!("  and enter the code:  {code}\n");
+                println!("  waiting for you to finish signing in...");
+            },
+            |status| println!("  {status}"),
+        )?;
+        println!("\nsigned in as {} ({})", s.username, s.uuid);
+        return Ok(());
     }
 
     if args.cmd == "java" {

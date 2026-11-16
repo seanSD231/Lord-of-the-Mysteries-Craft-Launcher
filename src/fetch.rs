@@ -219,6 +219,72 @@ pub fn download_unverified(
     Err(last_err.unwrap_or_else(|| anyhow!("could not download {url}")))
 }
 
+/// POSTs a form body and returns the response bytes, including for 4xx, because the
+/// device-code endpoint signals "still waiting" with a 400 carrying a JSON error.
+pub fn post_form_raw(url: &str, fields: &[(&str, &str)]) -> Result<Vec<u8>> {
+    let body = fields
+        .iter()
+        .map(|(k, v)| format!("{}={}", urlencode(k), urlencode(v)))
+        .collect::<Vec<_>>()
+        .join("&");
+    let resp = agent()
+        .post(url)
+        .set("Content-Type", "application/x-www-form-urlencoded")
+        .send_string(&body);
+    read_body(resp, url)
+}
+
+pub fn post_json_raw(
+    url: &str,
+    body: &serde_json::Value,
+    bearer: Option<&str>,
+) -> Result<Vec<u8>> {
+    let mut req = agent()
+        .post(url)
+        .set("Content-Type", "application/json")
+        .set("Accept", "application/json");
+    if let Some(b) = bearer {
+        req = req.set("Authorization", &format!("Bearer {b}"));
+    }
+    read_body(req.send_string(&body.to_string()), url)
+}
+
+pub fn get_with_bearer(url: &str, bearer: &str) -> Result<Vec<u8>> {
+    let resp = agent()
+        .get(url)
+        .set("Authorization", &format!("Bearer {bearer}"))
+        .set("Accept", "application/json")
+        .call();
+    read_body(resp, url)
+}
+
+fn read_body(
+    resp: std::result::Result<ureq::Response, ureq::Error>,
+    url: &str,
+) -> Result<Vec<u8>> {
+    let r = match resp {
+        Ok(r) => r,
+        // a 4xx carries the body we need, so it is not treated as a transport failure
+        Err(ureq::Error::Status(_, r)) => r,
+        Err(e) => return Err(anyhow!("{url}: {e}")),
+    };
+    let mut buf = Vec::new();
+    r.into_reader().take(4 << 20).read_to_end(&mut buf)?;
+    Ok(buf)
+}
+
+fn urlencode(s: &str) -> String {
+    s.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
+            b' ' => "+".to_string(),
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
 /// One file to fetch.
 #[derive(Clone, Debug)]
 pub struct Job {
