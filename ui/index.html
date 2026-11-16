@@ -41,7 +41,7 @@ header { position:relative; z-index:2; padding:13px 20px 0;
 .sigil img { width:36px; height:36px; image-rendering:pixelated; }
 h1 { margin:0; font-size:21px; font-weight:700; letter-spacing:.5px;
   color:var(--accent-hi); text-shadow:2px 2px 0 #000; }
-h1 em { font-style:normal; color:var(--gold); }
+h1 em { font-style:normal; }
 .sub { font-size:11px; color:var(--dim); margin-top:1px; }
 .rule { position:relative; height:1px; background:var(--gold-dim); margin:9px 20px 0; }
 .rule::after { content:""; position:absolute; right:-4px; top:-3px; width:7px; height:7px;
@@ -81,7 +81,18 @@ input[type=number]{width:70px}
 input:focus{outline:none;border-color:var(--accent)}
 label{display:block;font-size:11px;color:var(--dim);margin:5px 0 3px}
 
-.side { display:flex; flex-direction:column; gap:10px; }
+.side { display:flex; flex-direction:column; gap:11px; }
+/* A wrapper carries the gold edge and the end diamonds, because clip-path on the
+   button clips its own pseudo-elements away. */
+.bw { position:relative; display:block; padding:1px; background:var(--gold-dim);
+  clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 50%,
+                    calc(100% - 11px) 100%,11px 100%,0 50%); }
+.bw.sp { margin-top:auto; }
+.bw::before, .bw::after { content:""; position:absolute; top:50%; width:7px; height:7px;
+  margin-top:-3.5px; background:var(--gold); transform:rotate(45deg); z-index:3;
+  pointer-events:none; }
+.bw::before { left:-4px; } .bw::after { right:-4px; }
+.bw > button { width:100%; display:block; }
 button { font:inherit; font-size:12px; font-weight:700; letter-spacing:.4px;
   color:var(--text); cursor:pointer; padding:6px 8px;
   background:linear-gradient(180deg,
@@ -89,8 +100,8 @@ button { font:inherit; font-size:12px; font-weight:700; letter-spacing:.4px;
     color-mix(in srgb,var(--accent) 34%,#000) 55%,
     color-mix(in srgb,var(--accent) 17%,#000) 100%);
   border:1px solid var(--accent);
-  clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 50%,
-                    calc(100% - 11px) 100%,11px 100%,0 50%);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 50%,
+                    calc(100% - 10px) 100%,10px 100%,0 50%);
   text-shadow:1px 1px 0 #000; }
 button:hover:not(:disabled){filter:brightness(1.4)}
 button:disabled{opacity:.35;cursor:default}
@@ -182,7 +193,7 @@ footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
         </div>
         <div id="devWrap" class="hidden">
           <label for="devName">offline profile (testing)</label>
-          <input type="text" id="devName" value="dev1" spellcheck="false">
+          <input type="text" id="devName" placeholder="type a name" spellcheck="false">
         </div>
       </div>
       <div class="box">
@@ -200,13 +211,13 @@ footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
     </div>
 
     <div class="side">
-      <button class="play" id="btnPlay" disabled>PLAY</button>
-      <button id="btnPathway">Pathway</button>
-      <button id="btnLogin">Sign In</button>
-      <button id="btnLogout" class="hidden">Sign Out</button>
-      <button id="btnVerify">Verify Files</button>
-      <button id="btnFolder">Open Folder</button>
-      <button class="red" id="btnQuit" style="margin-top:auto">Quit</button>
+      <span class="bw"><button class="play" id="btnPlay" disabled>PLAY</button></span>
+      <span class="bw"><button id="btnPathway">Pathway</button></span>
+      <span class="bw"><button id="btnLogin">Sign In</button></span>
+      <span class="bw hidden"><button id="btnLogout">Sign Out</button></span>
+      <span class="bw"><button id="btnVerify">Verify Files</button></span>
+      <span class="bw"><button id="btnFolder">Open Folder</button></span>
+      <span class="bw sp"><button class="red" id="btnQuit">Quit</button></span>
     </div>
   </div>
 
@@ -215,7 +226,7 @@ footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
     <div class="grid" id="grid"></div>
     <div class="pathfoot">
       <span class="statusline">the launcher takes its colours from the pathway you pick</span>
-      <button class="red" id="btnBack" style="min-width:150px">Back</button>
+      <span class="bw" style="min-width:150px"><button class="red" id="btnBack">Back</button></span>
     </div>
   </div>
 
@@ -299,12 +310,22 @@ function setStatus(t, err) {
   const l = $('statusLine'); l.textContent = t; l.classList.toggle('err', !!err);
 }
 const setProgress = (d, t) => $('bar').style.width = (t > 0 ? Math.round(d/t*100) : 0) + '%';
+/* With an offline profile the name is the identity, so Play waits for one. */
+function offlineReady() {
+  const needsName = !$('devWrap').classList.contains('hidden');
+  $('btnPlay').disabled = needsName && $('devName').value.trim() === '';
+}
+
 function setBusy(b) {
-  ['btnPlay','btnLogin','btnVerify','btnLogout'].forEach(id => $(id).disabled = b);
+  ['btnLogin','btnVerify','btnLogout'].forEach(id => $(id).disabled = b);
+  $('btnPlay').disabled = b;
+  if (!b) offlineReady();
 }
 listen('status',   e => setStatus(e.payload));
 listen('progress', e => setProgress(e.payload.done, e.payload.total));
 listen('device_code', e => setStatus('open ' + e.payload.url + ' and enter ' + e.payload.code));
+
+$('devName').addEventListener('input', offlineReady);
 
 const clamp = v => Math.max(1024, Math.min(131072, v || 6144));
 $('mem').oninput = e => {
@@ -330,10 +351,10 @@ async function refresh() {
     inst.className = 'v ' + (s.installed ? 'good' : 'warn');
     $('footLeft').textContent = s.root;
     $('vUser').textContent = s.username || 'nobody';
-    $('btnLogin').classList.toggle('hidden', !!s.username);
-    $('btnLogout').classList.toggle('hidden', !s.username);
+    $('btnLogin').parentElement.classList.toggle('hidden', !!s.username);
+    $('btnLogout').parentElement.classList.toggle('hidden', !s.username);
     $('devWrap').classList.toggle('hidden', !s.offline_allowed);
-    $('btnPlay').disabled = false;
+    offlineReady();
     setStatus(s.installed ? 'ready' : 'first run -- Play installs everything');
   } catch (e) { setStatus(String(e), true); }
 }
