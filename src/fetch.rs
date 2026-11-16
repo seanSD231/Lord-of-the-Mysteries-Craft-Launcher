@@ -250,7 +250,7 @@ pub fn download_if_needed(
             return Ok(());
         }
     }
-    download_verified(url, dest, sha1, size, |a, b| on_progress(a, b))
+    download_verified(url, dest, sha1, size, on_progress)
 }
 
 /// Runs a batch of jobs across `threads` workers.

@@ -39,6 +39,8 @@ struct VersionStub {
     sha1: String,
 }
 
+// several fields here are read by the launch step rather than the install
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct VersionJson {
     pub id: String,
@@ -54,6 +56,7 @@ pub struct VersionJson {
     pub legacy_arguments: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct AssetIndexRef {
     pub id: String,
@@ -164,6 +167,7 @@ pub fn rules_allow(rules: &[Rule]) -> bool {
     allowed
 }
 
+#[allow(dead_code)] // version_json and assets_root are for the launch step
 pub struct Installed {
     pub version_json: PathBuf,
     pub client_jar: PathBuf,
