@@ -446,10 +446,8 @@ fn module_path_entries(jvm: &[String], sep: &str) -> std::collections::BTreeSet<
         let value = if a == "-p" || a == "--module-path" {
             i += 1;
             jvm.get(i).map(|s| s.as_str())
-        } else if let Some(rest) = a.strip_prefix("--module-path=") {
-            Some(rest)
         } else {
-            None
+            a.strip_prefix("--module-path=")
         };
         if let Some(v) = value {
             for part in v.split(sep) {
