@@ -184,6 +184,36 @@ fn attempt_download(
     Ok(())
 }
 
+/// Downloads to `dest` with the same resume and retry behaviour, but leaves verification
+/// to the caller. Only for places where the publisher uses a hash other than SHA-1, such
+/// as Adoptium's SHA-256; everything with a manifest entry goes through
+/// `download_verified` instead.
+pub fn download_unverified(
+    url: &str,
+    dest: &Path,
+    expect_size: u64,
+    on_progress: &mut impl FnMut(u64, u64),
+) -> Result<()> {
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let part = part_path(dest);
+    let mut last_err = None;
+    for attempt in 0..RETRIES {
+        match attempt_download(url, &part, expect_size, on_progress) {
+            Ok(()) => {
+                fs::rename(&part, dest)
+                    .with_context(|| format!("moving {} into place", dest.display()))?;
+                return Ok(());
+            }
+            Err(e) => last_err = Some(e),
+        }
+        backoff(attempt);
+    }
+    let _ = fs::remove_file(&part);
+    Err(last_err.unwrap_or_else(|| anyhow!("could not download {url}")))
+}
+
 fn part_path(dest: &Path) -> PathBuf {
     let mut name = dest.file_name().unwrap_or_default().to_os_string();
     name.push(".part");

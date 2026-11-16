@@ -5,6 +5,7 @@
 //! over a support chat with one command.
 
 mod fetch;
+mod java;
 mod manifest;
 mod policy;
 mod sync;
@@ -23,6 +24,7 @@ lotmcraft {version}
 
   lotmcraft sync   --root <dir> --manifest <url|file> [--dry-run] [--yes]
   lotmcraft verify --root <dir> --manifest <url|file>
+  lotmcraft java   --root <dir>
 
   --root      the instance folder, the one holding mods/
   --manifest  https://... or a local manifest.json
@@ -60,11 +62,12 @@ fn parse_args() -> Args {
             }
         }
     }
+    let needs_manifest = cmd != "java";
     match (root, manifest) {
-        (Some(r), Some(m)) => Args {
+        (Some(r), m) if m.is_some() || !needs_manifest => Args {
             cmd,
             root: PathBuf::from(r),
-            manifest: m,
+            manifest: m.unwrap_or_default(),
             dry_run,
             yes,
         },
@@ -108,6 +111,24 @@ fn main() -> Result<()> {
     let args = parse_args();
     if !args.root.is_dir() {
         bail!("{} is not a folder", args.root.display());
+    }
+
+    if args.cmd == "java" {
+        let dir = args.root.join(".lotmcraft").join("runtime");
+        println!("looking for a Java 21 runtime under {}", dir.display());
+        let mut last = 0u64;
+        let rt = java::ensure(&dir, |done, total| {
+            // only report each whole percent, or the console scrolls forever
+            let pct = if total > 0 { done * 100 / total } else { 0 };
+            if pct != last {
+                last = pct;
+                print!("\r  downloading Java... {pct}%");
+                let _ = std::io::stdout().flush();
+            }
+        })?;
+        println!("\r  ready: {}            ", rt.java.display());
+        println!("{}", rt.version()?);
+        return Ok(());
     }
 
     let m = load_manifest(&args.manifest)?;
