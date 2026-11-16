@@ -7,7 +7,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use anyhow::{Context, Result};
-use lotmcraft::{auth, fetch, java, launch, manifest::Manifest, mojang, neoforge, sync};
+use lotmcraft::{auth, fetch, java, launch, manifest::Manifest, mojang, neoforge, ping, sync};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -137,6 +137,32 @@ fn logout(ctx: State<'_, Ctx>) -> Result<(), String> {
     Ok(())
 }
 
+/// The server the pack is for. Shown on the front panel so a player can see whether it
+/// is up before they spend two minutes launching.
+const SERVER: &str = "37.114.51.51:25599";
+
+#[tauri::command]
+async fn server_status() -> Result<ping::ServerStatus, String> {
+    tauri::async_runtime::spawn_blocking(|| ping::status(SERVER))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Remembers window-side choices, such as the pathway whose colours are used.
+#[tauri::command]
+fn save_prefs(ctx: State<'_, Ctx>, prefs: serde_json::Value) -> Result<(), String> {
+    fetch::write_atomic(&ctx.base().join("ui.json"), prefs.to_string().as_bytes())
+        .map_err(fail)
+}
+
+#[tauri::command]
+fn load_prefs(ctx: State<'_, Ctx>) -> serde_json::Value {
+    std::fs::read(ctx.base().join("ui.json"))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_else(|| serde_json::json!({}))
+}
+
 #[tauri::command]
 fn quit(app: AppHandle) {
     app.exit(0);
@@ -249,7 +275,7 @@ async fn play(
             profile: &profile,
             memory_mb,
             extra_jvm: Vec::new(),
-            server: None,
+            server: Some(SERVER.to_string()),
         };
         let mut cmd = launch::build_command(&opts, &game.natives)?;
         // spawn rather than wait: the launcher should not hang around blocking on the
@@ -289,7 +315,10 @@ fn main() {
             play,
             verify_files,
             open_folder,
-            quit
+            quit,
+            server_status,
+            save_prefs,
+            load_prefs
         ])
         .run(tauri::generate_context!())
         .expect("the launcher window could not start");
