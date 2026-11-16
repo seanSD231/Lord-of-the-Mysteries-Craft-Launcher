@@ -156,14 +156,28 @@ def main():
     for spec in a.extra:
         rel, _, url = spec.partition("=")
         rel = rel.strip().replace(os.sep, "/")
-        local = os.path.join(a.root, rel)
-        if not os.path.isfile(local):
-            sys.exit(f"--extra {rel}: not found at {local}")
         if not url:
             sys.exit(f"--extra {rel}: needs PATH=URL")
-        cf.append({"path": rel, "size": os.path.getsize(local), "sha1": sha1_of(local),
-                   "url": url, "source": "external"})
-        print(f"  external: {rel}", file=sys.stderr)
+        local = os.path.join(a.root, rel)
+        if os.path.isfile(local):
+            size, sha1 = os.path.getsize(local), sha1_of(local)
+            print(f"  external: {rel} (hashed off disk)", file=sys.stderr)
+        else:
+            # not in the pack folder. The release asset is what players get, so hash that.
+            print(f"  external: {rel} not on disk, hashing {url}", file=sys.stderr)
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": UA})
+                h, size = hashlib.sha1(), 0
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    for block in iter(lambda: r.read(1 << 20), b""):
+                        h.update(block); size += len(block)
+                sha1 = h.hexdigest()
+            except Exception as e:
+                sys.exit(f"--extra {rel}: not at {local}, and could not fetch {url}\n  {e}")
+            if size == 0:
+                sys.exit(f"--extra {rel}: {url} returned an empty file")
+            print(f"    {size} bytes, sha1 {sha1}", file=sys.stderr)
+        cf.append({"path": rel, "size": size, "sha1": sha1, "url": url, "source": "external"})
 
     # an --extra may also have been hashed off disk; the explicit url wins
     extra_paths = {e.partition("=")[0].strip().replace(os.sep, "/") for e in a.extra}
