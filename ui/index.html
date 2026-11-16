@@ -35,8 +35,7 @@ html, body {
 /* the window can be any size; the panel does not stretch to fill it */
 .frame {
   position: relative;
-  width: min(100% - 20px, 960px);
-  height: min(100% - 20px, 620px);
+  width: calc(100% - 16px); height: calc(100% - 16px);
   border: 2px solid var(--accent);
   background: var(--panel);
   display: flex; flex-direction: column;
@@ -157,6 +156,26 @@ button.red { background: linear-gradient(180deg,#a8322c 0%,#7e2420 55%,#571915 1
 footer { position: relative; z-index: 2; padding: 6px 20px 10px;
          display: flex; justify-content: space-between; font-size: 10px; color: #4f4b5c; }
 .hidden { display: none !important; }
+
+/* ---- pathway screen ----------------------------------------------------- */
+.screen { position: relative; z-index: 2; flex: 1; min-height: 0;
+          display: flex; flex-direction: column; padding: 12px 20px 8px; }
+.grid { flex: 1; min-height: 0; overflow: auto;
+        display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+        align-content: start; padding-right: 4px; }
+.pick { border: 1px solid var(--gold-dim); background: rgba(0,0,0,.3);
+        padding: 7px 4px 6px; text-align: center; cursor: pointer; }
+.pick:hover { background: rgba(255,255,255,.05); }
+.pick.on { border-color: var(--gold); background: rgba(255,255,255,.07); }
+.pick img { width: 42px; height: 42px; image-rendering: pixelated; display: block;
+            margin: 0 auto 4px; }
+.pick .sw { width: 42px; height: 42px; margin: 0 auto 4px; border: 1px solid #000; }
+.pick span { font-size: 10px; color: var(--dim); display: block; line-height: 1.2; }
+.pick.on span { color: var(--accent-hi); }
+.screen .foot { display: flex; gap: 10px; align-items: center;
+                justify-content: space-between; margin-top: 10px; }
+.sigil img { width: 34px; height: 34px; image-rendering: pixelated; }
+.sigil.has-icon::before, .sigil.has-icon::after { display: none; }
 </style>
 </head>
 <body>
@@ -165,7 +184,7 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
   <span class="d tc"></span><span class="d bc"></span><span class="d lc"></span><span class="d rc"></span>
 
   <header>
-    <div class="sigil"></div>
+    <div class="sigil" id="sigil"></div>
     <div>
       <h1>Lord of the Mysteries <em>Craft</em></h1>
       <div class="sub" id="sub">reading the manifest…</div>
@@ -173,8 +192,8 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
   </header>
   <div class="rule"></div>
 
-  <main>
-    <!-- left column ----------------------------------------------------- -->
+  <!-- main screen -------------------------------------------------------- -->
+  <main id="scrMain">
     <div class="col">
       <div class="box">
         <h2><i></i>PACK</h2>
@@ -187,7 +206,7 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
         </div>
       </div>
 
-      <div class="box">
+      <div class="box" style="flex:1">
         <h2><i></i>SERVER</h2>
         <div class="kv">
           <span class="k">Address</span> <span class="v" id="vAddr">—</span>
@@ -199,23 +218,17 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
       </div>
     </div>
 
-    <!-- middle column --------------------------------------------------- -->
     <div class="col">
       <div class="box">
         <h2><i></i>ACCOUNT</h2>
         <div class="kv">
           <span class="k">Signed in</span> <span class="v" id="vUser">nobody</span>
+          <span class="k">Pathway</span>   <span class="v acc" id="vWay">—</span>
         </div>
         <div id="devWrap" class="hidden">
           <label for="devName">offline profile (testing)</label>
           <input type="text" id="devName" value="dev1" spellcheck="false">
         </div>
-      </div>
-
-      <div class="box">
-        <h2><i></i>PATHWAY</h2>
-        <div class="ways" id="ways"></div>
-        <div class="wayname" id="wayName">The Fool</div>
       </div>
 
       <div class="box">
@@ -227,22 +240,32 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
         </div>
       </div>
 
-      <div class="box" style="margin-top:auto">
+      <div class="box" style="flex:1; display:flex; flex-direction:column; justify-content:flex-end">
         <div class="statusline" id="statusLine">checking what is installed…</div>
         <div class="bar"><i id="bar"></i></div>
       </div>
     </div>
 
-    <!-- buttons --------------------------------------------------------- -->
     <div class="side">
       <button class="play" id="btnPlay" disabled>PLAY</button>
       <button id="btnLogin">Sign In</button>
       <button id="btnLogout" class="hidden">Sign Out</button>
+      <button id="btnWay">Pathway</button>
       <button id="btnVerify">Verify Files</button>
       <button id="btnFolder">Open Folder</button>
       <button class="red" id="btnQuit" style="margin-top:auto">Quit</button>
     </div>
   </main>
+
+  <!-- pathway screen ----------------------------------------------------- -->
+  <div class="screen hidden" id="scrWay">
+    <h2 style="font-size:13px; margin-bottom:8px"><i></i>CHOOSE A PATHWAY</h2>
+    <div class="grid" id="ways"></div>
+    <div class="foot">
+      <span class="statusline">the launcher takes its colours from the pathway you pick</span>
+      <button class="red" id="btnWayBack" style="min-width:140px">Back</button>
+    </div>
+  </div>
 
   <footer><span id="footLeft">—</span><span>v0.1.0</span></footer>
 </div>
@@ -255,48 +278,73 @@ const $ = id => document.getElementById(id);
 /* The twenty-two pathways, with the colour each one's GUI uses in the mod.
    The launcher has no pathway of its own, so the player picks. */
 const PATHWAYS = [
-  ["The Fool",            "#a94fd6"], ["The Door",           "#b8862f"],
-  ["The Error",           "#4a8fd0"], ["The Visionary",      "#d64fa8"],
-  ["The Sun",             "#e2c044"], ["The Tyrant",         "#2f7fd6"],
-  ["The Hanged Man",      "#8a6a3f"], ["The Demoness",       "#d6456e"],
-  ["The Hermit",          "#c0c6d0"], ["The Moon",           "#7a5bd6"],
-  ["The Mother",          "#3fb56a"], ["The Twilight Giant", "#d98a2b"],
-  ["The Death",           "#2fbf4a"], ["The Black Emperor",  "#2f49bf"],
-  ["The Abyss",           "#7a2fbf"], ["The Paragon",        "#d6b63f"],
-  ["The Chained",         "#8f2f2f"], ["The Red Priest",     "#bf2f3a"],
-  ["The Darkness",        "#4a4a6a"], ["The Reader",         "#d9d4c6"],
-  ["The Justiciar",       "#d9a441"], ["The Wheel of Fortune","#3fb0bf"],
+  ["apothecary",        "Apothecary",         "#2fa32f"],
+  ["apprentice",        "Apprentice",         "#5a6cf0"],
+  ["arbiter",           "Arbiter",            "#e0a020"],
+  ["assassin",          "Assassin",           "#e060e0"],
+  ["bard",              "Bard",               "#e0d44a"],
+  ["corpse_collector",  "Corpse Collector",   "#4fd44f"],
+  ["criminal",          "Criminal",           "#b02424"],
+  ["hunter",            "Hunter",             "#a82f22"],
+  ["lawyer",            "Lawyer",             "#3344c0"],
+  ["marauder",          "Marauder",           "#4f78e8"],
+  ["monster",           "Monster",            "#a8aab4"],
+  ["mystery_pryer",     "Mystery Pryer",      "#a63fb8"],
+  ["planter",           "Planter",            "#55c94a"],
+  ["prisoner",          "Prisoner",           "#8f3fc0"],
+  ["reader",            "Reader",             "#dcd8cc"],
+  ["sailor",            "Sailor",             "#3f8fd8"],
+  ["savant",            "Savant",             "#d8a832"],
+  ["secrets_supplicant","Secrets Supplicant", "#c03030"],
+  ["seer",              "Seer",               "#9b3fc4"],
+  ["sleepless",         "Sleepless",          "#6b6b78"],
+  ["spectator",         "Spectator",          "#44cfe0"],
+  ["warrior",           "Warrior",            "#d8c23f"],
 ];
 
-let prefs = { pathway: 12, memory: 6144 };
+let prefs = { pathway: 5, memory: 6144 };
+let icons = {};
 
-function applyPathway(i) {
-  const [name, hex] = PATHWAYS[i];
-  const r = document.documentElement.style;
-  r.setProperty('--accent', hex);
-  r.setProperty('--accent-hi', lighten(hex, 0.45));
-  r.setProperty('--accent-lo', darken(hex, 0.72));
-  $('wayName').textContent = name;
-  [...$('ways').children].forEach((el, n) => el.classList.toggle('on', n === i));
-  prefs.pathway = i;
-}
 function mix(hex, t, toward) {
   const n = parseInt(hex.slice(1), 16);
-  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-    .map(v => Math.round(v + (toward - v) * t));
-  return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    .map(v => Math.round(v + (toward - v) * t).toString(16).padStart(2, '0')).join('');
 }
 const lighten = (h, t) => mix(h, t, 255);
 const darken  = (h, t) => mix(h, t, 0);
 
-PATHWAYS.forEach(([name, hex], i) => {
-  const el = document.createElement('div');
-  el.className = 'way';
-  el.style.background = hex;
-  el.title = name;
-  el.onclick = () => { applyPathway(i); savePrefs(); };
-  $('ways').appendChild(el);
-});
+function applyPathway(i) {
+  const [id, name, hex] = PATHWAYS[i];
+  const r = document.documentElement.style;
+  r.setProperty('--accent', hex);
+  r.setProperty('--accent-hi', lighten(hex, .45));
+  r.setProperty('--accent-lo', darken(hex, .72));
+  prefs.pathway = i;
+  $('vWay').textContent = name;
+  const sig = $('sigil');
+  if (icons[id]) {
+    sig.classList.add('has-icon');
+    sig.innerHTML = '<img src="' + icons[id] + '" alt="">';
+  } else {
+    sig.classList.remove('has-icon');
+    sig.innerHTML = '';
+  }
+  [...$('ways').children].forEach((el, n) => el.classList.toggle('on', n === i));
+}
+
+function buildPicker() {
+  const g = $('ways');
+  g.innerHTML = '';
+  PATHWAYS.forEach(([id, name, hex], i) => {
+    const el = document.createElement('div');
+    el.className = 'pick';
+    el.innerHTML = icons[id]
+      ? '<img src="' + icons[id] + '" alt=""><span>' + name + '</span>'
+      : '<div class="sw" style="background:' + hex + '"></div><span>' + name + '</span>';
+    el.onclick = () => { applyPathway(i); savePrefs(); };
+    g.appendChild(el);
+  });
+}
 
 async function savePrefs() { try { await invoke('save_prefs', { prefs }); } catch {} }
 
@@ -305,7 +353,7 @@ function setStatus(t, err) {
 }
 const setProgress = (d, t) => $('bar').style.width = (t > 0 ? Math.round(d / t * 100) : 0) + '%';
 function setBusy(b) {
-  for (const id of ['btnPlay','btnLogin','btnVerify','btnLogout']) $(id).disabled = b;
+  for (const id of ['btnPlay','btnLogin','btnVerify','btnLogout','btnWay']) $(id).disabled = b;
 }
 
 listen('status',   e => setStatus(e.payload));
@@ -322,6 +370,13 @@ $('memNum').onchange = e => {
   e.target.value = v; $('memVal').textContent = v;
   $('mem').value = Math.min(v, +$('mem').max); prefs.memory = v; savePrefs();
 };
+
+function show(which) {
+  $('scrMain').classList.toggle('hidden', which !== 'main');
+  $('scrWay').classList.toggle('hidden', which !== 'way');
+}
+$('btnWay').onclick = () => show('way');
+$('btnWayBack').onclick = () => show('main');
 
 async function refresh() {
   try {
@@ -349,9 +404,8 @@ async function pingServer() {
     const s = await invoke('server_status');
     $('vAddr').textContent = '37.114.51.51:25599';
     const up = $('vUp');
-    up.innerHTML = s.online
-      ? '<span class="dot"></span>online'
-      : '<span class="dot off"></span>offline';
+    up.innerHTML = s.online ? '<span class="dot"></span>online'
+                            : '<span class="dot off"></span>offline';
     up.className = 'v ' + (s.online ? 'good' : 'warn');
     $('vPlayers').textContent = s.online ? s.players + ' / ' + s.max_players : '—';
     $('vPing').textContent = s.online ? s.ping_ms + ' ms' : '—';
@@ -389,11 +443,13 @@ $('btnFolder').onclick = () => invoke('open_folder');
 $('btnQuit').onclick = () => invoke('quit');
 
 (async () => {
+  try { icons = await invoke('pathway_icons'); } catch {}
   try {
     const saved = await invoke('load_prefs');
     if (typeof saved.pathway === 'number') prefs.pathway = saved.pathway;
     if (typeof saved.memory === 'number') prefs.memory = saved.memory;
   } catch {}
+  buildPicker();
   applyPathway(prefs.pathway);
   $('mem').value = Math.min(prefs.memory, 65536);
   $('memNum').value = prefs.memory;

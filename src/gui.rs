@@ -148,6 +148,66 @@ async fn server_status() -> Result<ping::ServerStatus, String> {
         .map_err(|e| e.to_string())
 }
 
+/// The pathway icons, read out of whichever jar in mods/ carries them.
+///
+/// They are the mod's own art, so they are not copied into this repository; the launcher
+/// reads them at runtime from the jar the player has already downloaded. If the pack is
+/// not installed yet there are none, and the window falls back to plain swatches.
+#[tauri::command]
+fn pathway_icons(ctx: State<'_, Ctx>) -> std::collections::BTreeMap<String, String> {
+    const DIR: &str = "assets/lotm/textures/pathway/";
+    let mut out = std::collections::BTreeMap::new();
+    let Ok(entries) = std::fs::read_dir(ctx.root.join("mods")) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().map(|e| e != "jar").unwrap_or(true) {
+            continue;
+        }
+        let Ok(file) = std::fs::File::open(&path) else { continue };
+        let Ok(mut zip) = zip::ZipArchive::new(file) else { continue };
+        let names: Vec<String> = (0..zip.len())
+            .filter_map(|i| zip.name_for_index(i).map(|n| n.to_string()))
+            .filter(|n| n.starts_with(DIR) && n.ends_with(".png"))
+            .collect();
+        if names.is_empty() {
+            continue;
+        }
+        for name in names {
+            let Ok(mut e) = zip.by_name(&name) else { continue };
+            let mut buf = Vec::new();
+            if std::io::copy(&mut e, &mut buf).is_err() {
+                continue;
+            }
+            let id = name
+                .trim_start_matches(DIR)
+                .trim_end_matches(".png")
+                .to_string();
+            out.insert(id, format!("data:image/png;base64,{}", b64(&buf)));
+        }
+        if !out.is_empty() {
+            break; // the first jar that has them is the one
+        }
+    }
+    out
+}
+
+/// Small enough not to warrant a dependency.
+fn b64(bytes: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        out.push(T[(n >> 18 & 63) as usize] as char);
+        out.push(T[(n >> 12 & 63) as usize] as char);
+        out.push(if chunk.len() > 1 { T[(n >> 6 & 63) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 2 { T[(n & 63) as usize] as char } else { '=' });
+    }
+    out
+}
+
 /// Remembers window-side choices, such as the pathway whose colours are used.
 #[tauri::command]
 fn save_prefs(ctx: State<'_, Ctx>, prefs: serde_json::Value) -> Result<(), String> {
@@ -318,7 +378,8 @@ fn main() {
             quit,
             server_status,
             save_prefs,
-            load_prefs
+            load_prefs,
+            pathway_icons
         ])
         .run(tauri::generate_context!())
         .expect("the launcher window could not start");
