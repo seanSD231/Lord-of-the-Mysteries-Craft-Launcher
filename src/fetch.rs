@@ -45,6 +45,11 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 fn agent() -> ureq::Agent {
+    static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
+    AGENT.get_or_init(build_agent).clone()
+}
+
+fn build_agent() -> ureq::Agent {
     ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(20))
         .timeout_read(Duration::from_secs(120))
@@ -212,6 +217,106 @@ pub fn download_unverified(
     }
     let _ = fs::remove_file(&part);
     Err(last_err.unwrap_or_else(|| anyhow!("could not download {url}")))
+}
+
+/// One file to fetch.
+#[derive(Clone, Debug)]
+pub struct Job {
+    pub url: String,
+    pub dest: PathBuf,
+    pub sha1: String,
+    pub size: u64,
+}
+
+/// Downloads `job` only if what is on disk does not already match.
+///
+/// Size is checked before hash: a file of exactly the right length is taken on trust,
+/// because hashing hundreds of megabytes on every launch would make startup unusable.
+pub fn download_if_needed(
+    url: &str,
+    dest: &Path,
+    sha1: &str,
+    size: u64,
+    on_progress: &mut impl FnMut(u64, u64),
+) -> Result<()> {
+    if dest.is_file() {
+        let len = fs::metadata(dest)?.len();
+        let ok = if size > 0 {
+            len == size
+        } else {
+            sha1_of_file(dest)?.eq_ignore_ascii_case(sha1)
+        };
+        if ok {
+            return Ok(());
+        }
+    }
+    download_verified(url, dest, sha1, size, |a, b| on_progress(a, b))
+}
+
+/// Runs a batch of jobs across `threads` workers.
+///
+/// Minecraft's asset index is about three thousand small files; fetched one at a time
+/// the round trips dominate and an install takes many minutes. Progress is reported as
+/// files completed rather than bytes, because with several in flight a byte count jumps
+/// around and means nothing.
+pub fn download_all(
+    jobs: &[Job],
+    threads: usize,
+    on_progress: &mut impl FnMut(u64, u64),
+) -> Result<()> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    let total = jobs.len();
+    if total == 0 {
+        return Ok(());
+    }
+    let next = Arc::new(AtomicUsize::new(0));
+    let done = Arc::new(AtomicUsize::new(0));
+    let failure: Arc<Mutex<Option<anyhow::Error>>> = Arc::new(Mutex::new(None));
+    let threads = threads.max(1).min(total);
+
+    std::thread::scope(|scope| {
+        for _ in 0..threads {
+            let (next, done, failure) = (next.clone(), done.clone(), failure.clone());
+            scope.spawn(move || loop {
+                // stop handing out work as soon as anything has failed
+                if failure.lock().map(|g| g.is_some()).unwrap_or(true) {
+                    return;
+                }
+                let i = next.fetch_add(1, Ordering::SeqCst);
+                let Some(job) = jobs.get(i) else { return };
+                let mut noop = |_: u64, _: u64| {};
+                if let Err(e) =
+                    download_if_needed(&job.url, &job.dest, &job.sha1, job.size, &mut noop)
+                {
+                    if let Ok(mut slot) = failure.lock() {
+                        if slot.is_none() {
+                            *slot = Some(e.context(format!("fetching {}", job.url)));
+                        }
+                    }
+                    return;
+                }
+                done.fetch_add(1, Ordering::SeqCst);
+            });
+        }
+
+        // the calling thread reports progress while the workers run
+        loop {
+            let d = done.load(Ordering::SeqCst);
+            on_progress(d as u64, total as u64);
+            if d >= total || failure.lock().map(|g| g.is_some()).unwrap_or(true) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(120));
+        }
+    });
+
+    if let Some(e) = failure.lock().ok().and_then(|mut g| g.take()) {
+        return Err(e);
+    }
+    on_progress(total as u64, total as u64);
+    Ok(())
 }
 
 fn part_path(dest: &Path) -> PathBuf {

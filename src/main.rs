@@ -7,6 +7,7 @@
 mod fetch;
 mod java;
 mod manifest;
+mod mojang;
 mod policy;
 mod sync;
 
@@ -25,6 +26,7 @@ lotmcraft {version}
   lotmcraft sync   --root <dir> --manifest <url|file> [--dry-run] [--yes]
   lotmcraft verify --root <dir> --manifest <url|file>
   lotmcraft java   --root <dir>
+  lotmcraft game   --root <dir> [--mc <version>]
 
   --root      the instance folder, the one holding mods/
   --manifest  https://... or a local manifest.json
@@ -42,6 +44,7 @@ struct Args {
     manifest: String,
     dry_run: bool,
     yes: bool,
+    mc: Option<String>,
 }
 
 fn parse_args() -> Args {
@@ -49,12 +52,14 @@ fn parse_args() -> Args {
     let cmd = it.next().unwrap_or_else(|| usage());
     let (mut root, mut manifest) = (None, None);
     let (mut dry_run, mut yes) = (false, false);
+    let mut mc: Option<String> = None;
     while let Some(a) = it.next() {
         match a.as_str() {
             "--root" => root = it.next(),
             "--manifest" => manifest = it.next(),
             "--dry-run" => dry_run = true,
             "--yes" | "-y" => yes = true,
+            "--mc" => mc = it.next(),
             "-h" | "--help" => usage(),
             other => {
                 eprintln!("unknown argument: {other}");
@@ -62,7 +67,7 @@ fn parse_args() -> Args {
             }
         }
     }
-    let needs_manifest = cmd != "java";
+    let needs_manifest = !matches!(cmd.as_str(), "java" | "game");
     match (root, manifest) {
         (Some(r), m) if m.is_some() || !needs_manifest => Args {
             cmd,
@@ -70,6 +75,7 @@ fn parse_args() -> Args {
             manifest: m.unwrap_or_default(),
             dry_run,
             yes,
+            mc,
         },
         _ => usage(),
     }
@@ -128,6 +134,33 @@ fn main() -> Result<()> {
         })?;
         println!("\r  ready: {}            ", rt.java.display());
         println!("{}", rt.version()?);
+        return Ok(());
+    }
+
+    if args.cmd == "game" {
+        let base = args.root.join(".lotmcraft");
+        let version = args.mc.clone().unwrap_or_else(|| "1.21.1".to_string());
+        println!("installing Minecraft {version} under {}\n", base.display());
+        let mut last = u64::MAX;
+        let installed = mojang::install(
+            &base,
+            &version,
+            |step| println!("{step}"),
+            |done, total| {
+                let pct = (done * 100).checked_div(total).unwrap_or(0);
+                if pct != last {
+                    last = pct;
+                    print!("\r  {pct}%   ");
+                    let _ = std::io::stdout().flush();
+                }
+            },
+        )?;
+        println!("\r        ");
+        println!("client:    {}", installed.client_jar.display());
+        println!("libraries: {}", installed.libraries.len());
+        println!("natives:   {}", installed.natives.len());
+        println!("assets:    index {}", installed.asset_index_id);
+        println!("mainClass: {}", installed.main_class);
         return Ok(());
     }
 
