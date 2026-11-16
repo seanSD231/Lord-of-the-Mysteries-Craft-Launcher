@@ -3,5 +3,4 @@ __pycache__/
 manifest.json
 overrides.zip
 .venv/
-build/
-dist/
+target/

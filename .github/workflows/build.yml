@@ -1,0 +1,61 @@
+name: Build launcher
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Test
+        run: cargo test --all --verbose
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  build:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: lotmcraft-windows-x64.exe
+            bin: lotmcraft.exe
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: lotmcraft-macos-arm64
+            bin: lotmcraft
+          - os: macos-13
+            target: x86_64-apple-darwin
+            name: lotmcraft-macos-x64
+            bin: lotmcraft
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: lotmcraft-linux-x64
+            bin: lotmcraft
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Stage
+        shell: bash
+        run: |
+          cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "${{ matrix.name }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
