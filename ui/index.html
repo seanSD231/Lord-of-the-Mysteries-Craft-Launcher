@@ -4,178 +4,126 @@
 <meta charset="utf-8">
 <title>Lord of the Mysteries Craft</title>
 <style>
-/* ---------------------------------------------------------------------------
-   Matches LOTM's in-game panels: double frame, diamond ornaments, pointed
-   buttons, pathway accent over near-black. Everything accent-coloured reads
-   from --accent, so changing pathway recolours the whole window at once.
---------------------------------------------------------------------------- */
+/* LOTM's in-game panel language: double frame, diamond ornaments, a lattice over
+   near-black, pointed buttons, red for anything that backs out. The accent is the
+   chosen pathway's own ChatFormatting colour, so one click recolours the window. */
 :root {
-  --accent:    #2fbf4a;
-  --accent-hi: #6ef08a;
-  --accent-lo: #17331e;
-  --gold:      #d9a441;
-  --gold-dim:  #7d5f28;
-  --panel:     #121119;
-  --panel-2:   #0b0a10;
-  --text:      #e9e6df;
-  --dim:       #857f90;
-  --red:       #a8322c;
-  --red-hi:    #d7554a;
-  --blue:      #4aa3e0;
+  --accent:#55ff55; --accent-hi:#a9ffa9; --accent-lo:#0f2a0f;
+  --gold:#d9a441; --gold-dim:#7a5d26;
+  --panel:#121119; --text:#e9e6df; --dim:#857f90;
+  --red-hi:#d7554a; --blue:#4aa3e0;
 }
-* { box-sizing: border-box; }
-html, body {
-  margin: 0; height: 100%;
-  background: #06060a;
-  color: var(--text);
-  font: 12px/1.45 "Consolas", "Lucida Console", "DejaVu Sans Mono", monospace;
-  user-select: none; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-}
-/* the window can be any size; the panel does not stretch to fill it */
-.frame {
-  position: relative;
-  width: calc(100% - 16px); height: calc(100% - 16px);
-  border: 2px solid var(--accent);
-  background: var(--panel);
-  display: flex; flex-direction: column;
-  box-shadow: 0 0 0 1px #000, 0 10px 40px rgba(0,0,0,.6);
-}
-.frame::before { content: ""; position: absolute; inset: 5px;
-  border: 1px solid var(--gold-dim); pointer-events: none; }
-.frame::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; overflow:hidden; user-select:none;
+  background:#06060a; color:var(--text);
+  font:12px/1.45 "Consolas","Lucida Console","DejaVu Sans Mono",monospace; }
+.frame { position:absolute; inset:8px; border:2px solid var(--accent);
+  background:var(--panel); display:flex; flex-direction:column; }
+.frame::before { content:""; position:absolute; inset:5px;
+  border:1px solid var(--gold-dim); pointer-events:none; }
+.frame::after { content:""; position:absolute; inset:0; pointer-events:none;
   background-image:
-    repeating-linear-gradient(45deg, transparent 0 13px, rgba(255,255,255,.022) 13px 14px),
-    repeating-linear-gradient(-45deg, transparent 0 13px, rgba(255,255,255,.022) 13px 14px); }
-
-.d { position: absolute; width: 9px; height: 9px; background: var(--gold);
-     transform: rotate(45deg); z-index: 4; }
-.d.tl{left:-5px;top:-5px} .d.tr{right:-5px;top:-5px}
-.d.bl{left:-5px;bottom:-5px} .d.br{right:-5px;bottom:-5px}
+    repeating-linear-gradient(45deg,transparent 0 13px,rgba(255,255,255,.02) 13px 14px),
+    repeating-linear-gradient(-45deg,transparent 0 13px,rgba(255,255,255,.02) 13px 14px); }
+.d { position:absolute; width:9px; height:9px; background:var(--gold);
+  transform:rotate(45deg); z-index:5; }
+.d.tl{left:-5px;top:-5px}.d.tr{right:-5px;top:-5px}
+.d.bl{left:-5px;bottom:-5px}.d.br{right:-5px;bottom:-5px}
 .d.tc{left:50%;top:-4px;margin-left:-4px;background:var(--accent-hi)}
 .d.bc{left:50%;bottom:-4px;margin-left:-4px;background:var(--accent-hi)}
-.d.lc{left:-4px;top:50%;margin-top:-4px} .d.rc{right:-4px;top:50%;margin-top:-4px}
+.d.lc{left:-4px;top:50%;margin-top:-4px}.d.rc{right:-4px;top:50%;margin-top:-4px}
 
-/* ---- head --------------------------------------------------------------- */
-header { position: relative; z-index: 2; padding: 14px 20px 0;
-         display: flex; align-items: center; gap: 14px; }
-.sigil {
-  width: 46px; height: 46px; flex: none; position: relative;
-  border: 2px solid var(--accent); border-radius: 50%;
-  background: radial-gradient(circle at 50% 42%, var(--accent-lo), #000 72%);
-  display: grid; place-items: center;
-}
-.sigil::before {
-  content: ""; width: 18px; height: 18px; border: 2px solid var(--accent-hi);
-  border-radius: 50%;
-}
-.sigil::after {
-  content: ""; position: absolute; width: 2px; height: 32px;
-  background: var(--accent-hi);
-}
-h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: .5px;
-     color: var(--accent-hi); text-shadow: 2px 2px 0 #000; }
-h1 em { font-style: normal; color: var(--gold); }
-.sub { font-size: 11px; color: var(--dim); margin-top: 1px; }
-.rule { position: relative; height: 1px; background: var(--gold-dim); margin: 10px 20px 0; }
-.rule::after { content: ""; position: absolute; right: -4px; top: -3px; width: 7px;
-  height: 7px; background: var(--gold); transform: rotate(45deg); }
+header { position:relative; z-index:2; padding:13px 20px 0;
+  display:flex; align-items:center; gap:13px; }
+.sigil { width:50px; height:50px; flex:none; border:2px solid var(--accent);
+  border-radius:50%; background:radial-gradient(circle at 50% 45%,var(--accent-lo),#000 75%);
+  display:grid; place-items:center; overflow:hidden; }
+.sigil img { width:36px; height:36px; image-rendering:pixelated; }
+h1 { margin:0; font-size:21px; font-weight:700; letter-spacing:.5px;
+  color:var(--accent-hi); text-shadow:2px 2px 0 #000; }
+h1 em { font-style:normal; color:var(--gold); }
+.sub { font-size:11px; color:var(--dim); margin-top:1px; }
+.rule { position:relative; height:1px; background:var(--gold-dim); margin:9px 20px 0; }
+.rule::after { content:""; position:absolute; right:-4px; top:-3px; width:7px; height:7px;
+  background:var(--gold); transform:rotate(45deg); }
 
-/* ---- body --------------------------------------------------------------- */
-main { position: relative; z-index: 2; flex: 1; min-height: 0;
-       display: grid; grid-template-columns: 1fr 1fr 186px;
-       gap: 14px; padding: 12px 20px 8px; }
-.col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.screen { position:relative; z-index:2; flex:1; min-height:0; padding:11px 20px 6px; }
+.screen.hidden { display:none; }
+#home { display:grid; grid-template-columns:1fr 1fr 174px; gap:13px; }
+.col { display:flex; flex-direction:column; gap:11px; min-height:0; }
+.box { position:relative; border:1px solid var(--gold-dim);
+  background:rgba(0,0,0,.33); padding:9px 11px; }
+.box.grow { flex:1; }
+h2 { margin:0 0 6px; font-size:11px; font-weight:700; letter-spacing:.6px;
+  color:var(--accent); display:flex; align-items:center; gap:7px; }
+h2::after { content:""; flex:1; height:1px; background:var(--gold-dim); }
+h2 i { width:5px; height:5px; background:var(--gold); transform:rotate(45deg);
+  display:inline-block; flex:none; }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; font-size:12px; }
+.kv .k { color:var(--dim); } .kv .v { color:var(--text); text-align:right; }
+.v.good{color:#63c957}.v.warn{color:var(--red-hi)}.v.acc{color:var(--accent-hi)}
+.motd { margin-top:6px; font-size:11px; color:var(--dim);
+  border-top:1px dotted #2e2a38; padding-top:5px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dot { display:inline-block; width:7px; height:7px; transform:rotate(45deg);
+  background:#63c957; margin-right:5px; }
+.dot.off { background:var(--red-hi); }
+.wayrow { display:flex; align-items:center; gap:11px; }
+.wayrow img { width:42px; height:42px; image-rendering:pixelated; flex:none; }
+.wayrow .nm { font-size:14px; color:var(--accent-hi); font-weight:700; }
+.wayrow .s0 { font-size:11px; color:var(--dim); }
+.memrow { display:flex; align-items:center; gap:8px; }
+.memrow .val { color:var(--accent-hi); font-weight:700; min-width:72px; font-size:12px; }
+input[type=range]{flex:1;accent-color:var(--accent)}
+input[type=text],input[type=number]{background:#08080c;border:1px solid var(--gold-dim);
+  color:var(--text);padding:4px 6px;font:inherit;width:100%}
+input[type=number]{width:70px}
+input:focus{outline:none;border-color:var(--accent)}
+label{display:block;font-size:11px;color:var(--dim);margin:5px 0 3px}
 
-.box { position: relative; border: 1px solid var(--gold-dim);
-       background: rgba(0,0,0,.32); padding: 9px 11px; }
-h2 { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .6px;
-     color: var(--accent); display: flex; align-items: center; gap: 7px; }
-h2::after { content: ""; flex: 1; height: 1px; background: var(--gold-dim); }
-h2 i { width: 5px; height: 5px; background: var(--gold); transform: rotate(45deg);
-       display: inline-block; flex: none; }
+.side { display:flex; flex-direction:column; gap:10px; }
+button { font:inherit; font-size:12px; font-weight:700; letter-spacing:.4px;
+  color:var(--text); cursor:pointer; padding:6px 8px;
+  background:linear-gradient(180deg,
+    color-mix(in srgb,var(--accent) 58%,#000) 0%,
+    color-mix(in srgb,var(--accent) 34%,#000) 55%,
+    color-mix(in srgb,var(--accent) 17%,#000) 100%);
+  border:1px solid var(--accent);
+  clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 50%,
+                    calc(100% - 11px) 100%,11px 100%,0 50%);
+  text-shadow:1px 1px 0 #000; }
+button:hover:not(:disabled){filter:brightness(1.4)}
+button:disabled{opacity:.35;cursor:default}
+button.play{padding:14px 8px;font-size:16px;letter-spacing:3px;color:#fff}
+button.red{background:linear-gradient(180deg,#a8322c 0%,#7e2420 55%,#571915 100%);
+  border-color:var(--red-hi)}
 
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; font-size: 12px; }
-.kv .k { color: var(--dim); }
-.kv .v { color: var(--text); text-align: right; }
-.v.good { color: #63c957; } .v.warn { color: var(--red-hi); } .v.acc { color: var(--accent-hi); }
+#pathway { display:flex; flex-direction:column; }
+.grid { flex:1; min-height:0; overflow-y:auto;
+  display:grid; grid-template-columns:repeat(6,1fr); gap:9px; padding:4px 2px; }
+.tile { border:1px solid var(--gold-dim); background:rgba(0,0,0,.32);
+  padding:8px 4px 6px; text-align:center; cursor:pointer; position:relative; }
+.tile img { width:40px; height:40px; image-rendering:pixelated; display:block;
+  margin:0 auto 5px; }
+.tile .nm { font-size:11px; color:var(--text); }
+.tile .s0 { font-size:10px; color:var(--dim); }
+.tile:hover { border-color:var(--text); }
+.tile.on { border-color:var(--w); box-shadow:inset 0 0 0 1px var(--w); }
+.tile.on .nm { color:var(--w); }
+.tile.on::after { content:""; position:absolute; right:-4px; top:-4px;
+  width:7px; height:7px; background:var(--gold); transform:rotate(45deg); }
+.pathfoot { display:flex; justify-content:space-between; align-items:center;
+  margin-top:9px; gap:12px; }
 
-.motd { margin-top: 6px; font-size: 11px; color: var(--dim);
-        border-top: 1px dotted #2e2a38; padding-top: 5px;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dot { display: inline-block; width: 7px; height: 7px; transform: rotate(45deg);
-       background: #63c957; margin-right: 5px; }
-.dot.off { background: var(--red-hi); }
-
-/* ---- pathway picker ----------------------------------------------------- */
-.ways { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; margin-top: 2px; }
-.way { height: 16px; border: 1px solid #000; cursor: pointer; position: relative; }
-.way:hover { outline: 1px solid var(--text); }
-.way.on::after { content: ""; position: absolute; inset: -4px; border: 1px solid var(--gold); }
-.wayname { margin-top: 6px; font-size: 11px; color: var(--accent-hi); }
-
-/* ---- memory ------------------------------------------------------------- */
-.memrow { display: flex; align-items: center; gap: 8px; }
-.memrow .val { color: var(--accent-hi); font-weight: 700; min-width: 74px; font-size: 12px; }
-input[type=range] { flex: 1; accent-color: var(--accent); }
-input[type=text], input[type=number] {
-  background: #08080c; border: 1px solid var(--gold-dim); color: var(--text);
-  padding: 4px 6px; font: inherit; width: 100%; }
-input[type=number] { width: 72px; }
-input:focus { outline: none; border-color: var(--accent); }
-label { display: block; font-size: 11px; color: var(--dim); margin: 6px 0 3px; }
-
-/* ---- buttons ------------------------------------------------------------ */
-.side { display: flex; flex-direction: column; gap: 12px; }
-button {
-  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .4px;
-  color: var(--text); cursor: pointer; padding: 6px 8px;
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--accent) 62%, #000) 0%,
-    color-mix(in srgb, var(--accent) 38%, #000) 55%,
-    color-mix(in srgb, var(--accent) 20%, #000) 100%);
-  border: 1px solid var(--accent);
-  clip-path: polygon(11px 0, calc(100% - 11px) 0, 100% 50%,
-                     calc(100% - 11px) 100%, 11px 100%, 0 50%);
-  text-shadow: 1px 1px 0 #000;
-}
-button:hover:not(:disabled) { filter: brightness(1.35); }
-button:disabled { opacity: .35; cursor: default; }
-button.play { padding: 13px 8px; font-size: 15px; letter-spacing: 2.5px;
-              color: #fff; }
-button.red { background: linear-gradient(180deg,#a8322c 0%,#7e2420 55%,#571915 100%);
-             border-color: var(--red-hi); }
-
-/* ---- foot --------------------------------------------------------------- */
-.statusline { font-size: 11px; color: var(--dim); white-space: nowrap;
-              overflow: hidden; text-overflow: ellipsis; }
-.statusline.err { color: var(--red-hi); white-space: normal; }
-.bar { margin-top: 5px; height: 8px; background: #07070b; border: 1px solid var(--gold-dim); }
-.bar i { display: block; height: 100%; width: 0;
-         background: linear-gradient(180deg, #8ed0f5, var(--blue)); transition: width .18s; }
-footer { position: relative; z-index: 2; padding: 6px 20px 10px;
-         display: flex; justify-content: space-between; font-size: 10px; color: #4f4b5c; }
-.hidden { display: none !important; }
-
-/* ---- pathway screen ----------------------------------------------------- */
-.screen { position: relative; z-index: 2; flex: 1; min-height: 0;
-          display: flex; flex-direction: column; padding: 12px 20px 8px; }
-.grid { flex: 1; min-height: 0; overflow: auto;
-        display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
-        align-content: start; padding-right: 4px; }
-.pick { border: 1px solid var(--gold-dim); background: rgba(0,0,0,.3);
-        padding: 7px 4px 6px; text-align: center; cursor: pointer; }
-.pick:hover { background: rgba(255,255,255,.05); }
-.pick.on { border-color: var(--gold); background: rgba(255,255,255,.07); }
-.pick img { width: 42px; height: 42px; image-rendering: pixelated; display: block;
-            margin: 0 auto 4px; }
-.pick .sw { width: 42px; height: 42px; margin: 0 auto 4px; border: 1px solid #000; }
-.pick span { font-size: 10px; color: var(--dim); display: block; line-height: 1.2; }
-.pick.on span { color: var(--accent-hi); }
-.screen .foot { display: flex; gap: 10px; align-items: center;
-                justify-content: space-between; margin-top: 10px; }
-.sigil img { width: 34px; height: 34px; image-rendering: pixelated; }
-.sigil.has-icon::before, .sigil.has-icon::after { display: none; }
+.statusline{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.statusline.err{color:var(--red-hi);white-space:normal}
+.bar{margin-top:5px;height:8px;background:#07070b;border:1px solid var(--gold-dim)}
+.bar i{display:block;height:100%;width:0;
+  background:linear-gradient(180deg,#8ed0f5,var(--blue));transition:width .18s}
+footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
+  justify-content:space-between;font-size:10px;color:#4f4b5c}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
@@ -184,35 +132,33 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
   <span class="d tc"></span><span class="d bc"></span><span class="d lc"></span><span class="d rc"></span>
 
   <header>
-    <div class="sigil" id="sigil"></div>
+    <div class="sigil"><img id="sigilImg" alt=""></div>
     <div>
       <h1>Lord of the Mysteries <em>Craft</em></h1>
-      <div class="sub" id="sub">reading the manifest…</div>
+      <div class="sub" id="sub">reading the manifest...</div>
     </div>
   </header>
   <div class="rule"></div>
 
-  <!-- main screen -------------------------------------------------------- -->
-  <main id="scrMain">
+  <div class="screen" id="home">
     <div class="col">
       <div class="box">
         <h2><i></i>PACK</h2>
         <div class="kv">
-          <span class="k">Version</span>   <span class="v acc" id="vPack">—</span>
-          <span class="k">Minecraft</span> <span class="v" id="vMc">—</span>
-          <span class="k">NeoForge</span>  <span class="v" id="vNf">—</span>
-          <span class="k">Files</span>     <span class="v" id="vFiles">—</span>
-          <span class="k">Installed</span> <span class="v" id="vInstalled">—</span>
+          <span class="k">Version</span>   <span class="v acc" id="vPack">--</span>
+          <span class="k">Minecraft</span> <span class="v" id="vMc">--</span>
+          <span class="k">NeoForge</span>  <span class="v" id="vNf">--</span>
+          <span class="k">Files</span>     <span class="v" id="vFiles">--</span>
+          <span class="k">Installed</span> <span class="v" id="vInstalled">--</span>
         </div>
       </div>
-
-      <div class="box" style="flex:1">
+      <div class="box grow">
         <h2><i></i>SERVER</h2>
         <div class="kv">
-          <span class="k">Address</span> <span class="v" id="vAddr">—</span>
-          <span class="k">Status</span>  <span class="v" id="vUp">checking…</span>
-          <span class="k">Players</span> <span class="v" id="vPlayers">—</span>
-          <span class="k">Ping</span>    <span class="v" id="vPing">—</span>
+          <span class="k">Address</span> <span class="v" id="vAddr">--</span>
+          <span class="k">Status</span>  <span class="v" id="vUp">checking...</span>
+          <span class="k">Players</span> <span class="v" id="vPlayers">--</span>
+          <span class="k">Ping</span>    <span class="v" id="vPing">--</span>
         </div>
         <div class="motd" id="vMotd"></div>
       </div>
@@ -220,17 +166,25 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
 
     <div class="col">
       <div class="box">
+        <h2><i></i>PATHWAY</h2>
+        <div class="wayrow">
+          <img id="wayImg" alt="">
+          <div>
+            <div class="nm" id="wayName">--</div>
+            <div class="s0" id="wayS0">--</div>
+          </div>
+        </div>
+      </div>
+      <div class="box">
         <h2><i></i>ACCOUNT</h2>
         <div class="kv">
           <span class="k">Signed in</span> <span class="v" id="vUser">nobody</span>
-          <span class="k">Pathway</span>   <span class="v acc" id="vWay">—</span>
         </div>
         <div id="devWrap" class="hidden">
           <label for="devName">offline profile (testing)</label>
           <input type="text" id="devName" value="dev1" spellcheck="false">
         </div>
       </div>
-
       <div class="box">
         <h2><i></i>MEMORY</h2>
         <div class="memrow">
@@ -239,35 +193,33 @@ footer { position: relative; z-index: 2; padding: 6px 20px 10px;
           <input type="number" id="memNum" min="1024" max="131072" step="256" value="6144">
         </div>
       </div>
-
-      <div class="box" style="flex:1; display:flex; flex-direction:column; justify-content:flex-end">
-        <div class="statusline" id="statusLine">checking what is installed…</div>
+      <div class="box grow" style="display:flex;flex-direction:column;justify-content:flex-end">
+        <div class="statusline" id="statusLine">checking what is installed...</div>
         <div class="bar"><i id="bar"></i></div>
       </div>
     </div>
 
     <div class="side">
       <button class="play" id="btnPlay" disabled>PLAY</button>
+      <button id="btnPathway">Pathway</button>
       <button id="btnLogin">Sign In</button>
       <button id="btnLogout" class="hidden">Sign Out</button>
-      <button id="btnWay">Pathway</button>
       <button id="btnVerify">Verify Files</button>
       <button id="btnFolder">Open Folder</button>
       <button class="red" id="btnQuit" style="margin-top:auto">Quit</button>
     </div>
-  </main>
+  </div>
 
-  <!-- pathway screen ----------------------------------------------------- -->
-  <div class="screen hidden" id="scrWay">
-    <h2 style="font-size:13px; margin-bottom:8px"><i></i>CHOOSE A PATHWAY</h2>
-    <div class="grid" id="ways"></div>
-    <div class="foot">
+  <div class="screen hidden" id="pathway">
+    <h2 style="margin-bottom:8px"><i></i>CHOOSE A PATHWAY</h2>
+    <div class="grid" id="grid"></div>
+    <div class="pathfoot">
       <span class="statusline">the launcher takes its colours from the pathway you pick</span>
-      <button class="red" id="btnWayBack" style="min-width:140px">Back</button>
+      <button class="red" id="btnBack" style="min-width:150px">Back</button>
     </div>
   </div>
 
-  <footer><span id="footLeft">—</span><span>v0.1.0</span></footer>
+  <footer><span id="footLeft">--</span><span>v0.1.0</span></footer>
 </div>
 
 <script>
@@ -275,116 +227,103 @@ const invoke = (c, a) => window.__TAURI__.core.invoke(c, a || {});
 const listen = (e, f) => window.__TAURI__.event.listen(e, f);
 const $ = id => document.getElementById(id);
 
-/* The twenty-two pathways, with the colour each one's GUI uses in the mod.
-   The launcher has no pathway of its own, so the player picks. */
+/* The twenty-two pathways, their Sequence 0 titles and the colour each one's own
+   GUI uses -- all three taken from the mod rather than invented. */
 const PATHWAYS = [
-  ["apothecary",        "Apothecary",         "#2fa32f"],
-  ["apprentice",        "Apprentice",         "#5a6cf0"],
-  ["arbiter",           "Arbiter",            "#e0a020"],
-  ["assassin",          "Assassin",           "#e060e0"],
-  ["bard",              "Bard",               "#e0d44a"],
-  ["corpse_collector",  "Corpse Collector",   "#4fd44f"],
-  ["criminal",          "Criminal",           "#b02424"],
-  ["hunter",            "Hunter",             "#a82f22"],
-  ["lawyer",            "Lawyer",             "#3344c0"],
-  ["marauder",          "Marauder",           "#4f78e8"],
-  ["monster",           "Monster",            "#a8aab4"],
-  ["mystery_pryer",     "Mystery Pryer",      "#a63fb8"],
-  ["planter",           "Planter",            "#55c94a"],
-  ["prisoner",          "Prisoner",           "#8f3fc0"],
-  ["reader",            "Reader",             "#dcd8cc"],
-  ["sailor",            "Sailor",             "#3f8fd8"],
-  ["savant",            "Savant",             "#d8a832"],
-  ["secrets_supplicant","Secrets Supplicant", "#c03030"],
-  ["seer",              "Seer",               "#9b3fc4"],
-  ["sleepless",         "Sleepless",          "#6b6b78"],
-  ["spectator",         "Spectator",          "#44cfe0"],
-  ["warrior",           "Warrior",            "#d8c23f"],
+  ["seer","Seer","Fool","#aa00aa"],
+  ["apprentice","Apprentice","Door","#5555ff"],
+  ["marauder","Marauder","Error","#5555ff"],
+  ["spectator","Spectator","Visionary","#55ffff"],
+  ["bard","Bard","Sun","#ffff55"],
+  ["sailor","Sailor","Tyrant","#5555ff"],
+  ["secrets_supplicant","Secrets Supplicant","Hanged Man","#aa0000"],
+  ["assassin","Assassin","Demoness","#ff55ff"],
+  ["mystery_pryer","Mystery Pryer","Hermit","#aa00aa"],
+  ["apothecary","Apothecary","Moon","#00aa00"],
+  ["planter","Planter","Mother","#55ff55"],
+  ["warrior","Warrior","Twilight Giant","#ffff55"],
+  ["corpse_collector","Corpse Collector","Death","#55ff55"],
+  ["lawyer","Lawyer","Black Emperor","#0000aa"],
+  ["criminal","Criminal","Abyss","#aa0000"],
+  ["savant","Savant","Paragon","#ffaa00"],
+  ["prisoner","Prisoner","Chained","#aa00aa"],
+  ["hunter","Hunter","Red Priest","#aa0000"],
+  ["sleepless","Sleepless","Darkness","#555555"],
+  ["reader","Reader","White Tower","#ffffff"],
+  ["arbiter","Arbiter","Justiciar","#ffaa00"],
+  ["monster","Monster","Wheel of Fortune","#aaaaaa"]
 ];
 
-let prefs = { pathway: 5, memory: 6144 };
-let icons = {};
+let prefs = { pathway: 12, memory: 6144 };
 
 function mix(hex, t, toward) {
   const n = parseInt(hex.slice(1), 16);
-  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-    .map(v => Math.round(v + (toward - v) * t).toString(16).padStart(2, '0')).join('');
+  return '#' + [(n>>16)&255,(n>>8)&255,n&255]
+    .map(v => Math.round(v + (toward - v) * t).toString(16).padStart(2,'0')).join('');
 }
-const lighten = (h, t) => mix(h, t, 255);
-const darken  = (h, t) => mix(h, t, 0);
-
 function applyPathway(i) {
-  const [id, name, hex] = PATHWAYS[i];
+  const p = PATHWAYS[i];
   const r = document.documentElement.style;
-  r.setProperty('--accent', hex);
-  r.setProperty('--accent-hi', lighten(hex, .45));
-  r.setProperty('--accent-lo', darken(hex, .72));
+  r.setProperty('--accent', p[3]);
+  r.setProperty('--accent-hi', mix(p[3], .5, 255));
+  r.setProperty('--accent-lo', mix(p[3], .78, 0));
+  $('sigilImg').src = 'pathway/' + p[0] + '.png';
+  $('wayImg').src   = 'pathway/' + p[0] + '.png';
+  $('wayName').textContent = p[1] + ' Pathway';
+  $('wayS0').textContent = 'Sequence 0: ' + p[2];
+  [...$('grid').children].forEach((el, n) => el.classList.toggle('on', n === i));
   prefs.pathway = i;
-  $('vWay').textContent = name;
-  const sig = $('sigil');
-  if (icons[id]) {
-    sig.classList.add('has-icon');
-    sig.innerHTML = '<img src="' + icons[id] + '" alt="">';
-  } else {
-    sig.classList.remove('has-icon');
-    sig.innerHTML = '';
-  }
-  [...$('ways').children].forEach((el, n) => el.classList.toggle('on', n === i));
 }
 
-function buildPicker() {
-  const g = $('ways');
-  g.innerHTML = '';
-  PATHWAYS.forEach(([id, name, hex], i) => {
-    const el = document.createElement('div');
-    el.className = 'pick';
-    el.innerHTML = icons[id]
-      ? '<img src="' + icons[id] + '" alt=""><span>' + name + '</span>'
-      : '<div class="sw" style="background:' + hex + '"></div><span>' + name + '</span>';
-    el.onclick = () => { applyPathway(i); savePrefs(); };
-    g.appendChild(el);
-  });
-}
+PATHWAYS.forEach((p, i) => {
+  const el = document.createElement('div');
+  el.className = 'tile';
+  el.style.setProperty('--w', p[3]);
+  el.innerHTML = '<img src="pathway/' + p[0] + '.png" alt="">' +
+                 '<div class="nm">' + p[1] + '</div>' +
+                 '<div class="s0">' + p[2] + '</div>';
+  el.onclick = () => { applyPathway(i); savePrefs(); };
+  $('grid').appendChild(el);
+});
 
-async function savePrefs() { try { await invoke('save_prefs', { prefs }); } catch {} }
+async function savePrefs() { try { await invoke('save_prefs', { prefs }); } catch (e) {} }
+
+function show(which) {
+  $('home').classList.toggle('hidden', which !== 'home');
+  $('pathway').classList.toggle('hidden', which !== 'pathway');
+}
+$('btnPathway').onclick = () => show('pathway');
+$('btnBack').onclick = () => show('home');
 
 function setStatus(t, err) {
   const l = $('statusLine'); l.textContent = t; l.classList.toggle('err', !!err);
 }
-const setProgress = (d, t) => $('bar').style.width = (t > 0 ? Math.round(d / t * 100) : 0) + '%';
+const setProgress = (d, t) => $('bar').style.width = (t > 0 ? Math.round(d/t*100) : 0) + '%';
 function setBusy(b) {
-  for (const id of ['btnPlay','btnLogin','btnVerify','btnLogout','btnWay']) $(id).disabled = b;
+  ['btnPlay','btnLogin','btnVerify','btnLogout'].forEach(id => $(id).disabled = b);
 }
-
 listen('status',   e => setStatus(e.payload));
 listen('progress', e => setProgress(e.payload.done, e.payload.total));
 listen('device_code', e => setStatus('open ' + e.payload.url + ' and enter ' + e.payload.code));
 
 const clamp = v => Math.max(1024, Math.min(131072, v || 6144));
 $('mem').oninput = e => {
-  const v = parseInt(e.target.value, 10);
+  const v = +e.target.value;
   $('memVal').textContent = v; $('memNum').value = v; prefs.memory = v; savePrefs();
 };
 $('memNum').onchange = e => {
-  const v = clamp(parseInt(e.target.value, 10));
+  const v = clamp(+e.target.value);
   e.target.value = v; $('memVal').textContent = v;
   $('mem').value = Math.min(v, +$('mem').max); prefs.memory = v; savePrefs();
 };
 
-function show(which) {
-  $('scrMain').classList.toggle('hidden', which !== 'main');
-  $('scrWay').classList.toggle('hidden', which !== 'way');
-}
-$('btnWay').onclick = () => show('way');
-$('btnWayBack').onclick = () => show('main');
-
 async function refresh() {
   try {
     const s = await invoke('status');
-    $('sub').textContent = 'Minecraft ' + s.minecraft + ' · ' + s.file_count + ' files';
+    $('sub').textContent = 'Minecraft ' + s.minecraft + '  .  ' + s.file_count + ' files';
     $('vPack').textContent = s.pack_version;
     $('vMc').textContent = s.minecraft;
-    $('vNf').textContent = s.neoforge || '—';
+    $('vNf').textContent = s.neoforge || '--';
     $('vFiles').textContent = s.file_count;
     const inst = $('vInstalled');
     inst.textContent = s.installed ? 'yes' : 'not yet';
@@ -395,7 +334,7 @@ async function refresh() {
     $('btnLogout').classList.toggle('hidden', !s.username);
     $('devWrap').classList.toggle('hidden', !s.offline_allowed);
     $('btnPlay').disabled = false;
-    setStatus(s.installed ? 'ready' : 'first run — Play installs everything');
+    setStatus(s.installed ? 'ready' : 'first run -- Play installs everything');
   } catch (e) { setStatus(String(e), true); }
 }
 
@@ -407,8 +346,8 @@ async function pingServer() {
     up.innerHTML = s.online ? '<span class="dot"></span>online'
                             : '<span class="dot off"></span>offline';
     up.className = 'v ' + (s.online ? 'good' : 'warn');
-    $('vPlayers').textContent = s.online ? s.players + ' / ' + s.max_players : '—';
-    $('vPing').textContent = s.online ? s.ping_ms + ' ms' : '—';
+    $('vPlayers').textContent = s.online ? s.players + ' / ' + s.max_players : '--';
+    $('vPing').textContent = s.online ? s.ping_ms + ' ms' : '--';
     $('vMotd').textContent = s.online ? s.motd : s.error;
   } catch (e) { $('vUp').textContent = 'unknown'; }
 }
@@ -424,8 +363,8 @@ $('btnPlay').onclick = async () => {
   setBusy(true); setProgress(0, 1);
   try {
     await invoke('play', {
-      memoryMb: clamp(parseInt($('memNum').value, 10)),
-      offlineName: $('devWrap').classList.contains('hidden') ? null : $('devName').value.trim(),
+      memoryMb: clamp(+$('memNum').value),
+      offlineName: $('devWrap').classList.contains('hidden') ? null : $('devName').value.trim()
     });
     setStatus('the game is running');
   } catch (e) { setStatus(String(e), true); }
@@ -443,20 +382,16 @@ $('btnFolder').onclick = () => invoke('open_folder');
 $('btnQuit').onclick = () => invoke('quit');
 
 (async () => {
-  try { icons = await invoke('pathway_icons'); } catch {}
   try {
     const saved = await invoke('load_prefs');
     if (typeof saved.pathway === 'number') prefs.pathway = saved.pathway;
     if (typeof saved.memory === 'number') prefs.memory = saved.memory;
-  } catch {}
-  buildPicker();
+  } catch (e) {}
   applyPathway(prefs.pathway);
   $('mem').value = Math.min(prefs.memory, 65536);
   $('memNum').value = prefs.memory;
   $('memVal').textContent = prefs.memory;
-  refresh();
-  pingServer();
-  setInterval(pingServer, 30000);
+  refresh(); pingServer(); setInterval(pingServer, 30000);
 })();
 </script>
 </body>
