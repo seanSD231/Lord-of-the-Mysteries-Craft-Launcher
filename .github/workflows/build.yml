@@ -15,8 +15,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Test
         run: cargo test --all --verbose
+      - name: Test with dev-offline
+        run: cargo test --all --features dev-offline --verbose
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy with dev-offline
+        run: cargo clippy --all-targets --features dev-offline -- -D warnings
 
   build:
     needs: check

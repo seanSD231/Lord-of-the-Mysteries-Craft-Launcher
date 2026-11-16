@@ -7,6 +7,7 @@
 mod auth;
 mod fetch;
 mod java;
+mod launch;
 mod manifest;
 mod mojang;
 mod neoforge;
@@ -32,6 +33,8 @@ lotmcraft {version}
   lotmcraft install --root <dir> --manifest <url|file>
   lotmcraft login  --root <dir>
   lotmcraft logout --root <dir>
+  lotmcraft launch --root <dir> --manifest <url|file> [--username <name>]
+                   [--memory <MB>] [--server <host:port>] [--print]
 
   --root      the instance folder, the one holding mods/
   --manifest  https://... or a local manifest.json
@@ -50,6 +53,10 @@ struct Args {
     dry_run: bool,
     yes: bool,
     mc: Option<String>,
+    username: Option<String>,
+    server: Option<String>,
+    memory: Option<u32>,
+    print_only: bool,
 }
 
 fn parse_args() -> Args {
@@ -58,6 +65,10 @@ fn parse_args() -> Args {
     let (mut root, mut manifest) = (None, None);
     let (mut dry_run, mut yes) = (false, false);
     let mut mc: Option<String> = None;
+    let mut username: Option<String> = None;
+    let mut server: Option<String> = None;
+    let mut memory: Option<u32> = None;
+    let mut print_only = false;
     while let Some(a) = it.next() {
         match a.as_str() {
             "--root" => root = it.next(),
@@ -65,6 +76,10 @@ fn parse_args() -> Args {
             "--dry-run" => dry_run = true,
             "--yes" | "-y" => yes = true,
             "--mc" => mc = it.next(),
+            "--username" => username = it.next(),
+            "--memory" => memory = it.next().and_then(|v| v.parse().ok()),
+            "--server" => server = it.next(),
+            "--print" => print_only = true,
             "-h" | "--help" => usage(),
             other => {
                 eprintln!("unknown argument: {other}");
@@ -81,6 +96,10 @@ fn parse_args() -> Args {
             dry_run,
             yes,
             mc,
+            username,
+            server,
+            memory,
+            print_only,
         },
         _ => usage(),
     }
@@ -242,6 +261,70 @@ fn main() -> Result<()> {
         }
 
         println!("\ninstalled. the game is not launchable yet -- that is the next piece.");
+        return Ok(());
+    }
+
+    if args.cmd == "launch" {
+        let base = args.root.join(".lotmcraft");
+
+        let profile = match &args.username {
+            Some(name) => {
+                if !launch::offline_allowed(&base) {
+                    bail!(
+                        "offline profiles need a Microsoft sign-in on this installation \
+                         first.\nRun `lotmcraft login --root .` once, then this works."
+                    );
+                }
+                println!("offline profile: {name}");
+                launch::Profile::Offline {
+                    username: name.clone(),
+                    uuid: launch::offline_uuid(name),
+                }
+            }
+            None => {
+                let s = auth::sign_in(
+                    &base,
+                    |url, code| {
+                        println!("\n  Open {url} and enter:  {code}\n");
+                    },
+                    |st| println!("  {st}"),
+                )?;
+                println!("signed in as {}", s.username);
+                launch::Profile::Online(s)
+            }
+        };
+
+        // the runtime and the game must already be installed
+        let rt = java::ensure(&base.join("runtime"), |_, _| {})?;
+        let nf = neoforge::install(&base, &rt, &m.neoforge, |_| {}, |_, _| {})
+            .context("NeoForge is not installed; run `lotmcraft install` first")?;
+
+        // natives come from the vanilla metadata, which is already on disk
+        let game = mojang::install(&base, &m.minecraft, |_| {}, |_, _| {})
+            .context("Minecraft is not installed; run `lotmcraft install` first")?;
+
+        let opts = launch::LaunchOptions {
+            game_dir: &args.root,
+            base: &base,
+            version_id: &nf.version_id,
+            java: &rt,
+            profile: &profile,
+            memory_mb: args.memory.unwrap_or(4096),
+            extra_jvm: Vec::new(),
+            server: args.server.clone(),
+        };
+        let mut cmd = launch::build_command(&opts, &game.natives)?;
+
+        if args.print_only {
+            println!("\n{:?}", cmd);
+            return Ok(());
+        }
+
+        println!("\nstarting {} ...\n", nf.version_id);
+        let status = cmd.status().context("starting the game")?;
+        if !status.success() {
+            bail!("the game exited with {status}");
+        }
         return Ok(());
     }
 
