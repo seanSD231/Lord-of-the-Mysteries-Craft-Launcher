@@ -46,6 +46,8 @@ struct Package {
 
 pub struct JavaRuntime {
     pub java: PathBuf,
+    /// The JDK root. The NeoForge installer and the launch both need it.
+    #[allow(dead_code)]
     pub home: PathBuf,
 }
 

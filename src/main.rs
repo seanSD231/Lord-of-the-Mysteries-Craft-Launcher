@@ -119,7 +119,7 @@ fn main() -> Result<()> {
         let mut last = 0u64;
         let rt = java::ensure(&dir, |done, total| {
             // only report each whole percent, or the console scrolls forever
-            let pct = if total > 0 { done * 100 / total } else { 0 };
+            let pct = (done * 100).checked_div(total).unwrap_or(0);
             if pct != last {
                 last = pct;
                 print!("\r  downloading Java... {pct}%");
