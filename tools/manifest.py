@@ -15,7 +15,7 @@ is hashed off disk, and anything Modrinth happens to host is linked rather than 
 
 The base url is where YOUR files will live. Linked files ignore it.
 """
-import argparse, hashlib, json, os, sys, urllib.request, zipfile
+import argparse, hashlib, json, os, sys, urllib.parse, urllib.request, zipfile
 
 # what belongs in a client pack. config and kubejs matter: a client with the wrong configs desyncs or fails to join.
 INCLUDE = ["mods", "config", "defaultconfigs", "kubejs", "resourcepacks", "shaderpacks", "schematics"]
@@ -233,11 +233,27 @@ def main():
             f["url"] = url
             f["source"] = "modrinth"
         else:
-            f["url"] = a.base_url + f["path"]
+            # A GitHub release has no folders: every asset sits flat under the tag, so
+            # the url is the base plus the file's NAME, never its pack path. Building it
+            # from the path gives a 404 for every player.
+            f["url"] = a.base_url + urllib.parse.quote(os.path.basename(f["path"]))
             f["source"] = "self"
             mine += 1
 
     files = cf + files
+
+    # flat assets mean two self-hosted files cannot share a name
+    seen = {}
+    for f in files:
+        if f["source"] != "self":
+            continue
+        name = os.path.basename(f["path"])
+        if name in seen and seen[name] != f["path"]:
+            sys.exit(f"two self-hosted files are both named {name}:\n"
+                     f"  {seen[name]}\n  {f['path']}\n"
+                     "A release stores assets flat, so one would overwrite the other. "
+                     "Rename one of them.")
+        seen[name] = f["path"]
 
     bundle = None
     if a.bundle:
