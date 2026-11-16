@@ -14,9 +14,13 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 /// Where the pack manifest is read from. Baked in so a player configures nothing.
+///
+/// A fixed `pack-latest` tag rather than `releases/latest`, because the latter is
+/// whichever release was published most recently -- publish a launcher release and
+/// every player's launcher would start looking for a manifest that is not there.
 const MANIFEST_URL: &str = concat!(
     "https://github.com/seanSD231/Lord-of-the-Mysteries-Craft-Launcher",
-    "/releases/latest/download/manifest.json"
+    "/releases/download/pack-latest/manifest.json"
 );
 const MANIFEST_LIMIT: usize = 8 << 20;
 
