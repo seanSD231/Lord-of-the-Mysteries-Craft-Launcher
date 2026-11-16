@@ -285,6 +285,66 @@ fn urlencode(s: &str) -> String {
         .collect()
 }
 
+/// Downloads with extra request headers. Not resumable: it exists for small internal
+/// fetches such as a private release asset, where the simplicity is worth more than
+/// resuming.
+pub fn download_with_headers(
+    url: &str,
+    dest: &Path,
+    headers: &[(&str, &str)],
+    on_progress: &mut impl FnMut(u64, u64),
+) -> Result<()> {
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let mut req = agent().get(url);
+    for (k, v) in headers {
+        req = req.set(k, v);
+    }
+    let resp = req.call().with_context(|| format!("requesting {url}"))?;
+    let total = resp
+        .header("Content-Length")
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(0);
+
+    let tmp = part_path(dest);
+    let mut file = File::create(&tmp)?;
+    let mut reader = resp.into_reader();
+    let mut buf = vec![0u8; CHUNK];
+    let mut done = 0u64;
+    loop {
+        let n = match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e).context("reading the response body"),
+        };
+        file.write_all(&buf[..n])?;
+        done += n as u64;
+        on_progress(done, total);
+    }
+    file.flush()?;
+    file.sync_all()?;
+    drop(file);
+    fs::rename(&tmp, dest).with_context(|| format!("moving {} into place", dest.display()))?;
+    Ok(())
+}
+
+/// A GET with headers, into memory.
+pub fn get_with_headers(url: &str, headers: &[(&str, &str)], limit: usize) -> Result<Vec<u8>> {
+    let mut req = agent().get(url);
+    for (k, v) in headers {
+        req = req.set(k, v);
+    }
+    let resp = req.call().with_context(|| format!("requesting {url}"))?;
+    let mut buf = Vec::new();
+    resp.into_reader().take(limit as u64 + 1).read_to_end(&mut buf)?;
+    if buf.len() > limit {
+        bail!("{url} is larger than the {limit} byte limit");
+    }
+    Ok(buf)
+}
+
 /// One file to fetch.
 #[derive(Clone, Debug)]
 pub struct Job {

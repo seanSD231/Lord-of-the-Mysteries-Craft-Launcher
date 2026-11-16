@@ -25,6 +25,20 @@ const FEED: &str = concat!(
     "/releases/download/launcher-latest/launcher.json"
 );
 
+/// Dev builds update from a private repository instead.
+///
+/// A dev build can launch with any username, so it must not be downloadable by anyone
+/// who knows a url. Auto-updating needs a url the launcher can reach unattended, and on
+/// a public repository that url is public -- so the dev channel lives somewhere private
+/// and every request carries a token the dev supplies.
+///
+/// The token is read from LOTMCRAFT_DEV_TOKEN, or from a `dev-token` file beside the
+/// launcher. It needs read access to that one repository and nothing else.
+#[cfg(feature = "dev-offline")]
+const DEV_REPO: &str = "seanSD231/lotmcraft-dev";
+#[cfg(feature = "dev-offline")]
+const DEV_TAG: &str = "launcher-dev";
+
 #[derive(Deserialize)]
 struct Feed {
     version: String,
@@ -97,10 +111,86 @@ fn old_path(exe: &Path) -> PathBuf {
     exe.with_file_name(name)
 }
 
+#[cfg(feature = "dev-offline")]
+fn dev_token() -> Option<String> {
+    if let Ok(v) = std::env::var("LOTMCRAFT_DEV_TOKEN") {
+        if !v.trim().is_empty() {
+            return Some(v.trim().to_string());
+        }
+    }
+    let beside = std::env::current_exe().ok()?.parent()?.join("dev-token");
+    let text = fs::read_to_string(beside).ok()?;
+    let token = text.trim().to_string();
+    if token.is_empty() {
+        None
+    } else {
+        Some(token)
+    }
+}
+
+#[cfg(feature = "dev-offline")]
+fn dev_headers(token: &str) -> Vec<(String, String)> {
+    vec![
+        ("Authorization".into(), format!("Bearer {token}")),
+        ("X-GitHub-Api-Version".into(), "2022-11-28".into()),
+        ("Accept".into(), "application/vnd.github+json".into()),
+    ]
+}
+
+/// Reads the dev release and returns (feed json, asset id by name).
+#[cfg(feature = "dev-offline")]
+fn dev_release(token: &str) -> Result<(Feed, std::collections::BTreeMap<String, u64>)> {
+    let url = format!("https://api.github.com/repos/{DEV_REPO}/releases/tags/{DEV_TAG}");
+    let h = dev_headers(token);
+    let hs: Vec<(&str, &str)> = h.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let body = crate::fetch::get_with_headers(&url, &hs, 1 << 20)
+        .context("reading the dev release (is the token still valid?)")?;
+    let release: serde_json::Value = serde_json::from_slice(&body)?;
+
+    let mut ids = std::collections::BTreeMap::new();
+    for a in release["assets"].as_array().into_iter().flatten() {
+        if let (Some(name), Some(id)) = (a["name"].as_str(), a["id"].as_u64()) {
+            ids.insert(name.to_string(), id);
+        }
+    }
+    let feed_id = *ids
+        .get("launcher-dev.json")
+        .ok_or_else(|| anyhow!("the dev release has no launcher-dev.json"))?;
+    let feed_bytes = dev_asset(token, feed_id, 1 << 20)?;
+    let feed: Feed = serde_json::from_slice(&feed_bytes).context("the dev feed is malformed")?;
+    Ok((feed, ids))
+}
+
+#[cfg(feature = "dev-offline")]
+fn dev_asset(token: &str, id: u64, limit: usize) -> Result<Vec<u8>> {
+    let url = format!("https://api.github.com/repos/{DEV_REPO}/releases/assets/{id}");
+    let h = vec![
+        ("Authorization".to_string(), format!("Bearer {token}")),
+        ("Accept".to_string(), "application/octet-stream".to_string()),
+    ];
+    let hs: Vec<(&str, &str)> = h.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    crate::fetch::get_with_headers(&url, &hs, limit)
+}
+
 /// Returns the newer version if there is one. Never an error the window has to show:
 /// a launcher that will not start because its update check failed is worse than one
 /// running a version behind.
 pub fn check() -> Option<Available> {
+    #[cfg(feature = "dev-offline")]
+    {
+        let token = dev_token()?;
+        let (feed, _) = dev_release(&token).ok()?;
+        if !newer(&feed.version, env!("CARGO_PKG_VERSION")) {
+            return None;
+        }
+        feed.builds.iter().find(|b| b.target == target())?;
+        return Some(Available {
+            version: feed.version + " (dev)",
+            notes: feed.notes,
+        });
+    }
+    #[cfg(not(feature = "dev-offline"))]
+    {
     let bytes = crate::fetch::get_bytes(FEED, 256 << 10).ok()?;
     let feed: Feed = serde_json::from_slice(&bytes).ok()?;
     if !newer(&feed.version, env!("CARGO_PKG_VERSION")) {
@@ -111,6 +201,7 @@ pub fn check() -> Option<Available> {
         version: feed.version,
         notes: feed.notes,
     })
+    }
 }
 
 /// Downloads the new binary, verifies it, and puts it in place.
@@ -118,8 +209,23 @@ pub fn check() -> Option<Available> {
 /// Returns the path to run. The caller starts it and exits; this function deliberately
 /// does neither, so the window can close itself tidily first.
 pub fn apply(mut on_progress: impl FnMut(u64, u64)) -> Result<PathBuf> {
-    let bytes = crate::fetch::get_bytes(FEED, 256 << 10).context("fetching the update feed")?;
-    let feed: Feed = serde_json::from_slice(&bytes).context("the update feed is malformed")?;
+    #[cfg(feature = "dev-offline")]
+    let (feed, asset_ids, token) = {
+        let token = dev_token().ok_or_else(|| {
+            anyhow!(
+                "this is a dev build and no dev token is set.\n\
+                 Put a GitHub token with read access to the dev repository in\n\
+                 LOTMCRAFT_DEV_TOKEN, or in a file named dev-token beside the launcher."
+            )
+        })?;
+        let (feed, ids) = dev_release(&token)?;
+        (feed, ids, token)
+    };
+    #[cfg(not(feature = "dev-offline"))]
+    let feed: Feed = {
+        let bytes = crate::fetch::get_bytes(FEED, 256 << 10).context("fetching the update feed")?;
+        serde_json::from_slice(&bytes).context("the update feed is malformed")?
+    };
     if !newer(&feed.version, env!("CARGO_PKG_VERSION")) {
         bail!("already up to date");
     }
@@ -133,6 +239,23 @@ pub fn apply(mut on_progress: impl FnMut(u64, u64)) -> Result<PathBuf> {
     let dir = exe.parent().unwrap_or(Path::new(".")).to_path_buf();
     let staged = dir.join(format!(".lotmcraft-update-{}", feed.version));
 
+    #[cfg(feature = "dev-offline")]
+    {
+        // a private asset is fetched by id through the api, not by url
+        let name = build
+            .url
+            .rsplit('/')
+            .next()
+            .unwrap_or_default()
+            .to_string();
+        let id = *asset_ids
+            .get(&name)
+            .ok_or_else(|| anyhow!("the dev release has no asset named {name}"))?;
+        let bytes = dev_asset(&token, id, 256 << 20).context("downloading the dev update")?;
+        on_progress(bytes.len() as u64, bytes.len() as u64);
+        fs::write(&staged, &bytes).context("writing the downloaded update")?;
+    }
+    #[cfg(not(feature = "dev-offline"))]
     crate::fetch::download_unverified(&build.url, &staged, build.size, &mut on_progress)
         .context("downloading the update")?;
 

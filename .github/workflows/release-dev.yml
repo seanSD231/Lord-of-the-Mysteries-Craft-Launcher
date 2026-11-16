@@ -1,0 +1,72 @@
+name: Release dev launcher
+
+# Builds the dev launcher (offline profiles enabled) and publishes it to a PRIVATE
+# repository, so devs get automatic updates without the binary being downloadable by
+# anyone who knows a url.
+#
+# Needs a secret named DEV_RELEASE_TOKEN: a fine-grained PAT with Contents: write on
+# the private dev repository and nothing else.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "ui/**"
+      - "Cargo.toml"
+      - "tauri.conf.json"
+  workflow_dispatch:
+
+jobs:
+  dev:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: dev-release
+      - name: Build
+        run: cargo build --release --features "gui,dev-offline" --bin lotmcraft-gui
+      - name: Stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp target/release/lotmcraft-gui.exe lotmcraft-dev-windows-x64.exe
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          # the build number keeps every push ahead of the last, so an update is
+          # always offered without anyone bumping a version by hand
+          full="${version}.${GITHUB_RUN_NUMBER}"
+          sha=$(sha256sum lotmcraft-dev-windows-x64.exe | cut -d' ' -f1)
+          size=$(stat -c%s lotmcraft-dev-windows-x64.exe)
+          cat > launcher-dev.json <<EOF
+          {
+            "version": "$full",
+            "notes": "${GITHUB_SHA:0:7}",
+            "builds": [
+              {"target": "windows-x64",
+               "url": "asset://lotmcraft-dev-windows-x64.exe",
+               "sha256": "$sha",
+               "size": $size}
+            ]
+          }
+          EOF
+          cat launcher-dev.json
+      - name: Publish to the private dev repo
+        env:
+          GH_TOKEN: ${{ secrets.DEV_RELEASE_TOKEN }}
+          DEV_REPO: seanSD231/lotmcraft-dev
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::DEV_RELEASE_TOKEN is not set; skipping the dev release"
+            exit 0
+          fi
+          if ! gh release view launcher-dev --repo "$DEV_REPO" >/dev/null 2>&1; then
+            gh release create launcher-dev --repo "$DEV_REPO" \
+              --title "Dev launcher" \
+              --notes "Replaced on every push to main. Offline profiles enabled; not for players."
+          fi
+          gh release upload launcher-dev \
+            lotmcraft-dev-windows-x64.exe launcher-dev.json \
+            --repo "$DEV_REPO" --clobber
