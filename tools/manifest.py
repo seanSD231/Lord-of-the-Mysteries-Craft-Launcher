@@ -299,8 +299,12 @@ def main():
         print(f"\nUpload {a.out} and {a.bundle}{' plus the jars above' if loose_self else ''} "
               "to the release at your base url.", file=sys.stderr)
         if extra_up:
-            print(f"  gh release create <tag> {a.out} {a.bundle} " +
-                  " ".join('"mods/' + os.path.basename(f["path"]) + '"' for f in loose_self), file=sys.stderr)
+            # the tag is the last path segment of the base url, so the printed command
+            # is one you can paste rather than one you have to edit
+            tag = [p for p in a.base_url.rstrip("/").split("/") if p][-1] if a.base_url else "<tag>"
+            print(f"  gh release create {tag} {a.out} {a.bundle} " +
+                  " ".join('"mods/' + os.path.basename(f["path"]) + '"' for f in loose_self),
+                  file=sys.stderr)
     elif mine:
         print("\nUpload only the 'self' files, keeping their paths, under your base url.", file=sys.stderr)
         print("List them with:  jq -r '.files[]|select(.source==\"self\")|.path' " + a.out, file=sys.stderr)
