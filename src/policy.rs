@@ -5,14 +5,14 @@
 //!
 //! The split follows NeoForge's own config naming, which means it needs no per-mod list:
 //!
-//! - `*client.toml`  a client preference. Never synced between client and server, and
-//!                   nothing depends on everyone agreeing. Seed.
-//! - `*server.toml`  the server's own values win at runtime; the local copy only matters
-//!                   in singleplayer. Seed.
-//! - `*common.toml`  loaded independently on both sides and never synced, so a mismatch
-//!                   diverges silently. Enforced.
-//! - everything else Enforced. The failure mode is mild (a player loses a tweak) where
-//!                   the other direction produces desync bugs that are miserable to find.
+//! - `*client.toml` is a client preference. Never synced between client and server, and
+//!   nothing depends on everyone agreeing. Seed.
+//! - `*server.toml` loses to the server's own values at runtime; the local copy only
+//!   matters in singleplayer. Seed.
+//! - `*common.toml` is loaded independently on both sides and never synced, so a
+//!   mismatch diverges silently. Enforced.
+//! - Everything else is enforced. That failure mode is mild (a player loses a tweak)
+//!   where the other direction produces desync bugs that are miserable to find.
 
 use std::path::Path;
 
@@ -54,6 +54,7 @@ pub fn policy_for(path: &str) -> Policy {
 }
 
 /// True if this path sits inside a folder the launcher may delete from.
+#[allow(dead_code)] // used by the tests, and by the Tauri shell
 pub fn is_managed_for_delete(rel: &str) -> bool {
     let lower = rel.replace('\\', "/").to_ascii_lowercase();
     MANAGED_DELETE_DIRS

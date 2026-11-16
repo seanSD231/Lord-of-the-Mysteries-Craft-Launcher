@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use crate::fetch::{self, sha1_of_file};
 use crate::manifest::{resolve, safe_relative, Manifest};
-use crate::policy::{is_managed_for_delete, policy_for, Policy, MANAGED_DELETE_DIRS};
+use crate::policy::{policy_for, Policy, MANAGED_DELETE_DIRS};
 
 #[derive(Debug, Default)]
 pub struct Plan {

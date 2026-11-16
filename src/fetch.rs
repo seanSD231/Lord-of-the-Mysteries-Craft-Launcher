@@ -33,6 +33,7 @@ pub fn sha1_of_file(path: &Path) -> Result<String> {
     Ok(hex(&h.finalize()))
 }
 
+#[allow(dead_code)] // used by the tests, and by the Tauri shell
 pub fn sha1_of_bytes(bytes: &[u8]) -> String {
     let mut h = Sha1::new();
     h.update(bytes);

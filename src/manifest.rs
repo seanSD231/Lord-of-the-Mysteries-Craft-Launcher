@@ -27,6 +27,7 @@ pub struct Bundle {
     pub sha1: String,
     pub url: String,
     #[serde(default)]
+    #[allow(dead_code)] // reported in the UI
     pub count: usize,
 }
 
