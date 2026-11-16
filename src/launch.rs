@@ -550,7 +550,7 @@ mod tests {
 
     #[test]
     fn neoforge_supplies_its_own_minecraft() {
-        let libs = vec![
+        let libs = [
             serde_json::json!({"name": "net.minecraft:client:1.21.1-20240808.144430:srg"}),
             serde_json::json!({"name": "org.lwjgl:lwjgl:3.3.3"}),
         ];
