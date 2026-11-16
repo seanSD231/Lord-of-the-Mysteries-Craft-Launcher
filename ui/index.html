@@ -271,6 +271,8 @@ const PATHWAYS = [
 ];
 
 let prefs = { pathway: 12, memory: 6144, manual: false };
+/* What the mod last wrote, if the player has been in game at all. */
+let gamePathway = null;
 
 function mix(hex, t, toward) {
   const n = parseInt(hex.slice(1), 16);
@@ -298,7 +300,13 @@ PATHWAYS.forEach((p, i) => {
   el.innerHTML = '<img src="pathway/' + p[0] + '.png" alt="">' +
                  '<div class="nm">' + p[1] + '</div>' +
                  '<div class="s0">' + p[2] + '</div>';
-  el.onclick = () => { prefs.manual = true; applyPathway(i); savePrefs(); };
+  el.onclick = () => {
+    // Picking a colour before ever playing is only a preference, so it must not stop
+    // the launcher following the real pathway once there is one. Picking one *after*
+    // the mod has reported a pathway is a deliberate override, and that does pin.
+    if (gamePathway) prefs.manual = true;
+    applyPathway(i); savePrefs();
+  };
   $('grid').appendChild(el);
 });
 
@@ -360,6 +368,7 @@ async function refresh() {
     $('btnLogout').parentElement.classList.toggle('hidden', !s.username);
     $('devWrap').classList.toggle('hidden', !s.offline_allowed);
     // the mod writes the player's pathway out; follow it unless one was chosen here
+    gamePathway = s.game_pathway || null;
     if (!prefs.manual && s.game_pathway) {
       const i = PATHWAYS.findIndex(p => p[0] === s.game_pathway);
       if (i >= 0 && i !== prefs.pathway) applyPathway(i);
