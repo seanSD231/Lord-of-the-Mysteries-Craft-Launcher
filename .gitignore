@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+manifest.json
+overrides.zip
+.venv/
+build/
+dist/
