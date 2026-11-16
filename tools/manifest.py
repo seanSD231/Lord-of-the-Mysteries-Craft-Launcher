@@ -155,8 +155,26 @@ def main():
                      "run this from the instance folder so the jars can be hashed")
 
     folders = [f.strip() for f in a.folders.split(",") if f.strip()]
+    loose = []
     if cf:
         folders = [f for f in folders if f != "mods"]      # CurseForge already told us about mods/
+        # ...but only about the ones it installed. A jar dropped into mods/ by hand is
+        # invisible to minecraftinstance.json, and leaving it out of the manifest means
+        # the launcher deletes it from every player's install as an orphan.
+        known = {e["path"].split("/")[-1] for e in cf}
+        known |= {e.partition("=")[0].strip().split("/")[-1] for e in a.extra}
+        mods_dir = os.path.join(a.root, "mods")
+        if os.path.isdir(mods_dir):
+            for name in sorted(os.listdir(mods_dir)):
+                full = os.path.join(mods_dir, name)
+                if not os.path.isfile(full) or name in known:
+                    continue
+                if name in SKIP_NAMES or name.endswith(SKIP_SUFFIX) or name.startswith("."):
+                    continue
+                if name.endswith(".disabled"):
+                    continue
+                loose.append({"path": "mods/" + name, "size": os.path.getsize(full),
+                              "sha1": sha1_of(full)})
 
     print("Hashing:", file=sys.stderr)
     files = walk(a.root, folders)
@@ -204,6 +222,8 @@ def main():
     if extra_paths:
         files = [f for f in files if f["path"] not in extra_paths]
 
+    files += loose
+
     linked = {} if a.no_modrinth else ask_modrinth(files)
 
     mine = 0
@@ -221,7 +241,8 @@ def main():
 
     bundle = None
     if a.bundle:
-        mine_files = [f for f in files if f["source"] == "self"]
+        mine_files = [f for f in files
+                      if f["source"] == "self" and not f["path"].startswith("mods/")]
         if mine_files:
             out_zip = os.path.join(os.path.dirname(os.path.abspath(a.out)) or ".", a.bundle)
             # deterministic: fixed timestamps and sorted order, so an unchanged pack hashes the same twice
@@ -265,8 +286,21 @@ def main():
         print("  No launcher may fetch these from CurseForge; they are in the 'self' list and you serve them:", file=sys.stderr)
         for b in blocked[:20]:
             print(f"    {b['path']}", file=sys.stderr)
+    loose_self = [f for f in files if f["source"] == "self" and f["path"].startswith("mods/")]
+    if loose_self:
+        print(f"\n  {len(loose_self)} mod(s) are not from CurseForge or Modrinth. They are in the", file=sys.stderr)
+        print("  manifest, but you must upload each jar to the release yourself:", file=sys.stderr)
+        for f in loose_self:
+            print(f"    {f['path']}  ({f['size'] / 1e6:.1f} MB)", file=sys.stderr)
+        print("  If one of these is a stray download, delete it and run this again.", file=sys.stderr)
+
     if bundle:
-        print(f"\nUpload {a.out} and {a.bundle} to the release at your base url. Nothing else.", file=sys.stderr)
+        extra_up = " ".join('"' + os.path.basename(f["path"]) + '"' for f in loose_self)
+        print(f"\nUpload {a.out} and {a.bundle}{' plus the jars above' if loose_self else ''} "
+              "to the release at your base url.", file=sys.stderr)
+        if extra_up:
+            print(f"  gh release create <tag> {a.out} {a.bundle} " +
+                  " ".join('"mods/' + os.path.basename(f["path"]) + '"' for f in loose_self), file=sys.stderr)
     elif mine:
         print("\nUpload only the 'self' files, keeping their paths, under your base url.", file=sys.stderr)
         print("List them with:  jq -r '.files[]|select(.source==\"self\")|.path' " + a.out, file=sys.stderr)
