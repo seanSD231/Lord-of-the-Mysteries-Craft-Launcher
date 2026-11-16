@@ -25,6 +25,18 @@ pub struct NeoForge {
     pub version_json: PathBuf,
 }
 
+/// Resolves against the current directory without canonicalising, which on Windows would
+/// produce a \\?\ prefix that some Java code handles badly.
+fn absolute(p: &Path) -> Result<PathBuf> {
+    Ok(if p.is_absolute() {
+        p.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("reading the current directory")?
+            .join(p)
+    })
+}
+
 /// The installer refuses to run without this file, because it expects to be writing into
 /// a real Mojang launcher installation. An empty profile list is enough to satisfy it.
 fn ensure_launcher_profiles(base: &Path) -> Result<()> {
@@ -95,12 +107,17 @@ pub fn install(
     }
 
     on_step("running the NeoForge installer (this takes a minute)");
-    let out = Command::new(&java.java)
+    // The child runs with its working directory set to base, so every path handed to it
+    // must be absolute. Passing the relative ones made Java look for the jar at
+    // .lotmcraft/.lotmcraft/installers/...
+    let abs_base = absolute(base)?;
+    let abs_installer = absolute(&installer)?;
+    let out = Command::new(absolute(&java.java)?)
         .arg("-jar")
-        .arg(&installer)
+        .arg(&abs_installer)
         .arg("--install-client")
-        .arg(base)
-        .current_dir(base)
+        .arg(&abs_base)
+        .current_dir(&abs_base)
         .output()
         .with_context(|| format!("running {}", java.java.display()))?;
 
