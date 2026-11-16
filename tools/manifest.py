@@ -242,19 +242,6 @@ def main():
 
     files = cf + files
 
-    # flat assets mean two self-hosted files cannot share a name
-    seen = {}
-    for f in files:
-        if f["source"] != "self":
-            continue
-        name = os.path.basename(f["path"])
-        if name in seen and seen[name] != f["path"]:
-            sys.exit(f"two self-hosted files are both named {name}:\n"
-                     f"  {seen[name]}\n  {f['path']}\n"
-                     "A release stores assets flat, so one would overwrite the other. "
-                     "Rename one of them.")
-        seen[name] = f["path"]
-
     bundle = None
     if a.bundle:
         mine_files = [f for f in files
@@ -275,6 +262,20 @@ def main():
             bundle = {"file": a.bundle, "size": os.path.getsize(out_zip), "sha1": sha1_of(out_zip),
                       "url": a.base_url + a.bundle, "count": len(mine_files)}
             print(f"\nwrote {out_zip}  ({bundle['size'] / 1e6:.1f} MB, {len(mine_files)} files)", file=sys.stderr)
+
+    # Only files that become flat release assets can collide. Anything inside
+    # overrides.zip keeps its full path in the zip and is marked "bundle" by now.
+    seen = {}
+    for f in files:
+        if f["source"] != "self":
+            continue
+        name = os.path.basename(f["path"])
+        if name in seen and seen[name] != f["path"]:
+            sys.exit(f"two files would be uploaded as the same asset name ({name}):\n"
+                     f"  {seen[name]}\n  {f['path']}\n"
+                     "A release stores assets flat, so one would overwrite the other. "
+                     "Rename one of them.")
+        seen[name] = f["path"]
 
     manifest = {
         "name": a.name,
