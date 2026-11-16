@@ -20,6 +20,8 @@ const MAVEN: &str = "https://maven.neoforged.net/releases/net/neoforged/neoforge
 
 pub struct NeoForge {
     pub version_id: String,
+    /// Read by the launch step, which merges it with the vanilla json it inherits from.
+    #[allow(dead_code)]
     pub version_json: PathBuf,
 }
 
