@@ -12,11 +12,11 @@
     "windows": [
       {
         "title": "Lord of the Mysteries Craft",
-        "width": 820,
-        "height": 520,
+        "width": 900,
+        "height": 600,
         "resizable": true,
-        "minWidth": 760,
-        "minHeight": 480,
+        "minWidth": 840,
+        "minHeight": 560,
         "theme": "Dark"
       }
     ]

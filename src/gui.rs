@@ -138,6 +138,11 @@ fn logout(ctx: State<'_, Ctx>) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn quit(app: AppHandle) {
+    app.exit(0);
+}
+
+#[tauri::command]
 fn open_folder(ctx: State<'_, Ctx>) -> Result<(), String> {
     let p = &ctx.root;
     let cmd = if cfg!(windows) {
@@ -283,7 +288,8 @@ fn main() {
             logout,
             play,
             verify_files,
-            open_folder
+            open_folder,
+            quit
         ])
         .run(tauri::generate_context!())
         .expect("the launcher window could not start");
