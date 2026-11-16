@@ -330,29 +330,6 @@ pub fn build_command(opts: &LaunchOptions, natives: &[PathBuf]) -> Result<Comman
             }
         }
     }
-    // NeoForge 1.20.2+ ships its own patched Minecraft as a library, so the vanilla jar
-    // must not be added as well: the JVM would see two modules exporting the same
-    // packages (the vanilla jar becomes an automatic module named after its filename,
-    // _1._21._1) and refuse to resolve. Only add it when nothing else supplies one.
-    let minecraft_from_libraries = m.libraries.iter().any(|lib| {
-        lib["name"]
-            .as_str()
-            .map(|n| n.starts_with("net.minecraft:client") || n.starts_with("net.minecraft:joined"))
-            .unwrap_or(false)
-    });
-    if !minecraft_from_libraries {
-        let root_id = chain
-            .last()
-            .and_then(|v| v.get("id"))
-            .and_then(|x| x.as_str())
-            .unwrap_or("")
-            .to_string();
-        let client_jar = paths.version_dir(&root_id).join(format!("{root_id}.jar"));
-        if client_jar.is_file() {
-            cp.push(client_jar.to_string_lossy().to_string());
-        }
-    }
-
     let mut vars: BTreeMap<String, String> = BTreeMap::new();
     vars.insert("auth_player_name".into(), opts.profile.username().into());
     vars.insert("auth_uuid".into(), opts.profile.uuid().into());
@@ -403,6 +380,35 @@ pub fn build_command(opts: &LaunchOptions, natives: &[PathBuf]) -> Result<Comman
                 .unwrap_or(true)
         });
     }
+    // FML finds and loads the game jar itself, out of the library directory, using the
+    // --fml.mcVersion and --fml.neoFormVersion coordinates. It does not appear in the
+    // library list at all. Adding versions/1.21.1/1.21.1.jar as well gives the JVM two
+    // Minecrafts -- FML's `minecraft` module and the vanilla jar, which has no
+    // module-info and so becomes the automatic module `_1._21._1` -- and the module
+    // layer cannot resolve:
+    //
+    //   Modules _1._21._1 and minecraft export package net.minecraft.server to module X
+    //
+    // The library list is not the signal to go by; FML's own arguments are.
+    let fml_supplies_game = jvm_raw.iter().any(|a| a.contains("-DignoreList="))
+        || m.game_args.iter().any(|a| {
+            a.as_str()
+                .map(|s| s.starts_with("--fml."))
+                .unwrap_or(false)
+        });
+    if !fml_supplies_game {
+        let root_id = chain
+            .last()
+            .and_then(|v| v.get("id"))
+            .and_then(|x| x.as_str())
+            .unwrap_or("")
+            .to_string();
+        let client_jar = paths.version_dir(&root_id).join(format!("{root_id}.jar"));
+        if client_jar.is_file() {
+            cp.push(client_jar.to_string_lossy().to_string());
+        }
+    }
+
     vars.insert("classpath".into(), cp.join(sep));
 
     let mut cmd = Command::new(&opts.java.java);
@@ -549,18 +555,18 @@ mod tests {
     }
 
     #[test]
-    fn neoforge_supplies_its_own_minecraft() {
-        let libs = [
-            serde_json::json!({"name": "net.minecraft:client:1.21.1-20240808.144430:srg"}),
-            serde_json::json!({"name": "org.lwjgl:lwjgl:3.3.3"}),
-        ];
-        let supplied = libs.iter().any(|lib| {
-            lib["name"]
-                .as_str()
-                .map(|n| n.starts_with("net.minecraft:client"))
-                .unwrap_or(false)
-        });
-        assert!(supplied, "the vanilla jar must not be added alongside this");
+    fn fml_is_detected_from_its_arguments() {
+        let jvm = ["-DignoreList=client-extra,neoforge-21.1.264.jar".to_string()];
+        assert!(jvm.iter().any(|a| a.contains("-DignoreList=")));
+
+        let game = [serde_json::json!("--fml.mcVersion"), serde_json::json!("1.21.1")];
+        assert!(game
+            .iter()
+            .any(|a| a.as_str().map(|s| s.starts_with("--fml.")).unwrap_or(false)));
+
+        // a plain vanilla launch has neither, so it still gets the client jar
+        let vanilla_jvm = ["-cp".to_string(), "x.jar".to_string()];
+        assert!(!vanilla_jvm.iter().any(|a| a.contains("-DignoreList=")));
     }
 
     #[test]
