@@ -20,6 +20,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+#[cfg_attr(feature = "dev-offline", allow(dead_code))]
 const FEED: &str = concat!(
     "https://github.com/seanSD231/Lord-of-the-Mysteries-Craft-Launcher",
     "/releases/download/launcher-latest/launcher.json"
@@ -54,6 +55,7 @@ struct Build {
     url: String,
     sha256: String,
     #[serde(default)]
+    #[cfg_attr(feature = "dev-offline", allow(dead_code))] // the api gives the size
     size: u64,
 }
 
@@ -130,11 +132,11 @@ fn dev_token() -> Option<String> {
 
 #[cfg(feature = "dev-offline")]
 fn dev_headers(token: &str) -> Vec<(String, String)> {
-    vec![
+    Vec::from([
         ("Authorization".into(), format!("Bearer {token}")),
         ("X-GitHub-Api-Version".into(), "2022-11-28".into()),
         ("Accept".into(), "application/vnd.github+json".into()),
-    ]
+    ])
 }
 
 /// Reads the dev release and returns (feed json, asset id by name).
@@ -164,7 +166,7 @@ fn dev_release(token: &str) -> Result<(Feed, std::collections::BTreeMap<String, 
 #[cfg(feature = "dev-offline")]
 fn dev_asset(token: &str, id: u64, limit: usize) -> Result<Vec<u8>> {
     let url = format!("https://api.github.com/repos/{DEV_REPO}/releases/assets/{id}");
-    let h = vec![
+    let h = [
         ("Authorization".to_string(), format!("Bearer {token}")),
         ("Accept".to_string(), "application/octet-stream".to_string()),
     ];
@@ -184,10 +186,10 @@ pub fn check() -> Option<Available> {
             return None;
         }
         feed.builds.iter().find(|b| b.target == target())?;
-        return Some(Available {
+        Some(Available {
             version: feed.version + " (dev)",
             notes: feed.notes,
-        });
+        })
     }
     #[cfg(not(feature = "dev-offline"))]
     {
