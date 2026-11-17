@@ -64,10 +64,11 @@ h1 em { font-style:normal; }
 .screen { position:relative; z-index:2; flex:1; min-height:0; padding:11px 20px 6px; }
 .screen.hidden { display:none; }
 #home { display:grid; grid-template-columns:1fr 1fr 174px; gap:13px; }
-.col { display:flex; flex-direction:column; gap:11px; min-height:0; }
+.col { display:flex; flex-direction:column; gap:11px; min-height:0;
+       align-content:start; }
 .box { position:relative; border:1px solid var(--gold-dim);
   background:rgba(0,0,0,.33); padding:9px 11px; }
-.box.grow { flex:1; }
+.box.grow { }
 h2 { margin:0 0 6px; font-size:11px; font-weight:700; letter-spacing:.6px;
   color:var(--accent); display:flex; align-items:center; gap:7px; }
 h2::after { content:""; flex:1; height:1px; background:var(--gold-dim); }
@@ -101,7 +102,6 @@ label{display:block;font-size:11px;color:var(--dim);margin:5px 0 3px}
 .bw { position:relative; display:block; padding:1px; background:var(--gold-dim);
   clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 50%,
                     calc(100% - 11px) 100%,11px 100%,0 50%); }
-.bw.sp { margin-top:auto; }
 .bw::before, .bw::after { content:""; position:absolute; top:50%; width:7px; height:7px;
   margin-top:-3.5px; background:var(--gold); transform:rotate(45deg); z-index:3;
   pointer-events:none; }
@@ -181,7 +181,7 @@ footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
           <span class="k">Installed</span> <span class="v" id="vInstalled">--</span>
         </div>
       </div>
-      <div class="box grow">
+      <div class="box">
         <h2><i></i>SERVER</h2>
         <div class="kv">
           <span class="k">Address</span> <span class="v" id="vAddr">--</span>
@@ -227,7 +227,7 @@ footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
         <div class="statusline" id="updText" style="white-space:normal"></div>
         <span class="bw" style="margin-top:7px"><button id="btnUpdate">Install &amp; Restart</button></span>
       </div>
-      <div class="box grow" style="display:flex;flex-direction:column;justify-content:flex-end">
+      <div class="box">
         <div class="statusline" id="statusLine">checking what is installed...</div>
         <div class="bar"><i id="bar"></i></div>
       </div>
@@ -239,7 +239,7 @@ footer{position:relative;z-index:2;padding:5px 20px 9px;display:flex;
       <span class="bw"><button id="btnLogin">Sign In</button></span>
       <span class="bw hidden"><button id="btnLogout">Sign Out</button></span>
       <span class="bw"><button id="btnVerify">Verify Files</button></span>
-      <span class="bw sp"><button class="red" id="btnQuit">Quit</button></span>
+      <span class="bw" style="margin-top:6px"><button class="red" id="btnQuit">Quit</button></span>
     </div>
   </div>
 
