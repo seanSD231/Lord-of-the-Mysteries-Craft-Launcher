@@ -54,12 +54,11 @@ html,body { margin:0; height:100%; overflow:hidden; user-select:none;
 /* A single gold rail across the middle of each edge, thicker than the border and
    outlined dark, with the small diamonds riding on it. Previously these were a few
    short stubs, which read as fragments rather than a rail. */
-.gb { position:absolute; background:var(--gold); z-index:6;
-      box-shadow:0 0 0 1px #3b2c0d; }
-.gb.ct{top:-3px;left:calc(50% - 70px);width:140px;height:5px}
-.gb.cb{bottom:-3px;left:calc(50% - 70px);width:140px;height:5px}
-.gb.cl{left:-3px;top:calc(50% - 70px);height:140px;width:5px}
-.gb.cr{right:-3px;top:calc(50% - 70px);height:140px;width:5px}
+.gb { position:absolute; background:var(--gold); z-index:6; }
+.gb.ct{top:-2px;left:calc(50% - 70px);width:140px;height:2px}
+.gb.cb{bottom:-2px;left:calc(50% - 70px);width:140px;height:2px}
+.gb.cl{left:-2px;top:calc(50% - 70px);height:140px;width:2px}
+.gb.cr{right:-2px;top:calc(50% - 70px);height:140px;width:2px}
 
 /* small gold diamonds on the border, flanking each centre ornament */
 .sd { position:absolute; width:7px; height:7px; background:var(--gold);
