@@ -51,6 +51,14 @@ jobs:
           }
           EOF
           cat launcher-dev.json
+      # Always keep a downloadable copy, so a dev build can be fetched even before the
+      # private channel exists -- and because this job is far quicker than the full
+      # four-platform build.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lotmcraft-gui-dev
+          path: lotmcraft-dev-windows-x64.exe
+
       - name: Publish to the private dev repo
         env:
           GH_TOKEN: ${{ secrets.DEV_RELEASE_TOKEN }}
