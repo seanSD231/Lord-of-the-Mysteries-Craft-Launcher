@@ -265,6 +265,11 @@ fn quit(app: AppHandle) {
     app.exit(0);
 }
 
+/// No button opens this any more -- players have no reason to be in the instance
+/// folder, and inviting them in is how a mod gets deleted and reported as a bug. Kept
+/// for support: it can be called from the console if someone needs talking through a
+/// problem.
+#[allow(dead_code)]
 #[tauri::command]
 fn open_folder(ctx: State<'_, Ctx>) -> Result<(), String> {
     let p = &ctx.root;
