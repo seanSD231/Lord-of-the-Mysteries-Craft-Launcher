@@ -22,10 +22,10 @@ html,body { margin:0; height:100%; overflow:hidden; user-select:none;
    short segments punctuating it. Gold diamonds ride that line, the centre one larger
    with an accent core. A thin bronze rectangle sits well inside, with its own corner
    diamonds. */
-.frame { position:absolute; inset:12px; border:2px solid var(--gold);
+.frame { position:absolute; inset:12px; border:2px solid var(--accent);
   border-radius:10px; background:var(--panel);
   display:flex; flex-direction:column;
-  box-shadow:0 0 0 1px #30240c, inset 0 0 0 1px rgba(255,220,130,.35); }
+  box-shadow:0 0 0 1px #11101a; }
 /* the lattice: large diamonds in the accent, barely there */
 .frame::after { content:""; position:absolute; inset:0; pointer-events:none;
   border-radius:8px; opacity:.5;
@@ -38,14 +38,34 @@ html,body { margin:0; height:100%; overflow:hidden; user-select:none;
 .frame::before { content:""; position:absolute; inset:11px;
   border:1px solid var(--gold-dim); pointer-events:none; z-index:4; }
 
-/* accent segments on the gold border, two per edge, either side of the ornaments */
-.seg { position:absolute; background:var(--accent); z-index:6; }
-.seg.h { height:2px; width:66px; }
-.seg.v { width:2px; height:66px; }
-.seg.t1{top:-2px;left:calc(50% - 150px)} .seg.t2{top:-2px;left:calc(50% + 84px)}
-.seg.b1{bottom:-2px;left:calc(50% - 150px)} .seg.b2{bottom:-2px;left:calc(50% + 84px)}
-.seg.l1{left:-2px;top:calc(50% - 116px)} .seg.l2{left:-2px;top:calc(50% + 50px)}
-.seg.r1{right:-2px;top:calc(50% - 116px)} .seg.r2{right:-2px;top:calc(50% + 50px)}
+/* Gold lives at the corners and around the ornaments; the long runs between stay
+   the pathway colour. The first attempt had this the other way round, which made
+   the whole frame read gold with a token stub of colour. */
+.cg { position:absolute; width:52px; height:52px; z-index:6; pointer-events:none; }
+.cg.tl{left:-2px;top:-2px;border-top:2px solid var(--gold);border-left:2px solid var(--gold);
+       border-top-left-radius:10px}
+.cg.tr{right:-2px;top:-2px;border-top:2px solid var(--gold);border-right:2px solid var(--gold);
+       border-top-right-radius:10px}
+.cg.bl{left:-2px;bottom:-2px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold);
+       border-bottom-left-radius:10px}
+.cg.br{right:-2px;bottom:-2px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold);
+       border-bottom-right-radius:10px}
+
+/* short gold runs carrying each ornament */
+.gb { position:absolute; background:var(--gold); z-index:6; }
+.gb.h { height:2px; } .gb.v { width:2px; }
+.gb.ct{top:-2px;left:calc(50% - 17px);width:34px}
+.gb.cb{bottom:-2px;left:calc(50% - 17px);width:34px}
+.gb.cl{left:-2px;top:calc(50% - 17px);height:34px}
+.gb.cr{right:-2px;top:calc(50% - 17px);height:34px}
+.gb.t1{top:-2px;left:calc(50% - 77px);width:20px}
+.gb.t2{top:-2px;left:calc(50% + 57px);width:20px}
+.gb.b1{bottom:-2px;left:calc(50% - 77px);width:20px}
+.gb.b2{bottom:-2px;left:calc(50% + 57px);width:20px}
+.gb.l1{left:-2px;top:calc(50% - 65px);height:20px}
+.gb.l2{left:-2px;top:calc(50% + 45px);height:20px}
+.gb.r1{right:-2px;top:calc(50% - 65px);height:20px}
+.gb.r2{right:-2px;top:calc(50% + 45px);height:20px}
 
 /* small gold diamonds on the border, flanking each centre ornament */
 .sd { position:absolute; width:7px; height:7px; background:var(--gold);
@@ -179,10 +199,14 @@ footer{position:relative;z-index:2;padding:5px 26px 10px;display:flex;
 </head>
 <body>
 <div class="frame">
-  <span class="seg h t1"></span><span class="seg h t2"></span>
-  <span class="seg h b1"></span><span class="seg h b2"></span>
-  <span class="seg v l1"></span><span class="seg v l2"></span>
-  <span class="seg v r1"></span><span class="seg v r2"></span>
+  <span class="cg tl"></span><span class="cg tr"></span>
+  <span class="cg bl"></span><span class="cg br"></span>
+  <span class="gb h ct"></span><span class="gb h cb"></span>
+  <span class="gb v cl"></span><span class="gb v cr"></span>
+  <span class="gb h t1"></span><span class="gb h t2"></span>
+  <span class="gb h b1"></span><span class="gb h b2"></span>
+  <span class="gb v l1"></span><span class="gb v l2"></span>
+  <span class="gb v r1"></span><span class="gb v r2"></span>
   <span class="sd t1"></span><span class="sd t2"></span>
   <span class="sd b1"></span><span class="sd b2"></span>
   <span class="sd l1"></span><span class="sd l2"></span>
