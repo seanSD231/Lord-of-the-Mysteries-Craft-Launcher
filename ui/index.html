@@ -51,39 +51,33 @@ html,body { margin:0; height:100%; overflow:hidden; user-select:none;
 .cg.br{right:-2px;bottom:-2px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold);
        border-bottom-right-radius:10px}
 
-/* short gold runs carrying each ornament */
-.gb { position:absolute; background:var(--gold); z-index:6; }
-.gb.h { height:2px; } .gb.v { width:2px; }
-.gb.ct{top:-2px;left:calc(50% - 17px);width:34px}
-.gb.cb{bottom:-2px;left:calc(50% - 17px);width:34px}
-.gb.cl{left:-2px;top:calc(50% - 17px);height:34px}
-.gb.cr{right:-2px;top:calc(50% - 17px);height:34px}
-.gb.t1{top:-2px;left:calc(50% - 77px);width:20px}
-.gb.t2{top:-2px;left:calc(50% + 57px);width:20px}
-.gb.b1{bottom:-2px;left:calc(50% - 77px);width:20px}
-.gb.b2{bottom:-2px;left:calc(50% + 57px);width:20px}
-.gb.l1{left:-2px;top:calc(50% - 65px);height:20px}
-.gb.l2{left:-2px;top:calc(50% + 45px);height:20px}
-.gb.r1{right:-2px;top:calc(50% - 65px);height:20px}
-.gb.r2{right:-2px;top:calc(50% + 45px);height:20px}
+/* A single gold rail across the middle of each edge, thicker than the border and
+   outlined dark, with the small diamonds riding on it. Previously these were a few
+   short stubs, which read as fragments rather than a rail. */
+.gb { position:absolute; background:var(--gold); z-index:6;
+      box-shadow:0 0 0 1px #3b2c0d; }
+.gb.ct{top:-3px;left:calc(50% - 70px);width:140px;height:5px}
+.gb.cb{bottom:-3px;left:calc(50% - 70px);width:140px;height:5px}
+.gb.cl{left:-3px;top:calc(50% - 70px);height:140px;width:5px}
+.gb.cr{right:-3px;top:calc(50% - 70px);height:140px;width:5px}
 
 /* small gold diamonds on the border, flanking each centre ornament */
 .sd { position:absolute; width:7px; height:7px; background:var(--gold);
   border:1px solid #6b5212; transform:rotate(45deg); z-index:7;
   box-shadow:inset 0 0 0 1px var(--accent-hi); }
-.sd.t1{top:-5px;left:calc(50% - 68px)} .sd.t2{top:-5px;left:calc(50% + 61px)}
-.sd.b1{bottom:-5px;left:calc(50% - 68px)} .sd.b2{bottom:-5px;left:calc(50% + 61px)}
-.sd.l1{left:-5px;top:calc(50% - 56px)} .sd.l2{left:-5px;top:calc(50% + 49px)}
-.sd.r1{right:-5px;top:calc(50% - 56px)} .sd.r2{right:-5px;top:calc(50% + 49px)}
+.sd.t1{top:-4px;left:calc(50% - 56px)} .sd.t2{top:-4px;left:calc(50% + 49px)}
+.sd.b1{bottom:-4px;left:calc(50% - 56px)} .sd.b2{bottom:-4px;left:calc(50% + 49px)}
+.sd.l1{left:-4px;top:calc(50% - 56px)} .sd.l2{left:-4px;top:calc(50% + 49px)}
+.sd.r1{right:-4px;top:calc(50% - 56px)} .sd.r2{right:-4px;top:calc(50% + 49px)}
 
 /* the centre ornament on each edge: a gold diamond with an accent core */
-.big { position:absolute; width:16px; height:16px; background:var(--gold);
+.big { position:absolute; width:19px; height:19px; background:var(--gold);
   border:1px solid #6b5212; transform:rotate(45deg); z-index:8;
   display:grid; place-items:center; }
 .big::after { content:""; width:6px; height:6px; background:var(--accent);
   box-shadow:0 0 5px color-mix(in srgb,var(--accent) 70%,transparent); }
-.big.t{top:-10px;left:calc(50% - 9px)} .big.b{bottom:-10px;left:calc(50% - 9px)}
-.big.l{left:-10px;top:calc(50% - 9px)} .big.r{right:-10px;top:calc(50% - 9px)}
+.big.t{top:-11px;left:calc(50% - 11px)} .big.b{bottom:-11px;left:calc(50% - 11px)}
+.big.l{left:-11px;top:calc(50% - 11px)} .big.r{right:-11px;top:calc(50% - 11px)}
 
 /* gold diamonds on the corners of the inner bronze rule */
 .gd { position:absolute; width:7px; height:7px; background:var(--gold);
@@ -201,12 +195,8 @@ footer{position:relative;z-index:2;padding:5px 26px 10px;display:flex;
 <div class="frame">
   <span class="cg tl"></span><span class="cg tr"></span>
   <span class="cg bl"></span><span class="cg br"></span>
-  <span class="gb h ct"></span><span class="gb h cb"></span>
-  <span class="gb v cl"></span><span class="gb v cr"></span>
-  <span class="gb h t1"></span><span class="gb h t2"></span>
-  <span class="gb h b1"></span><span class="gb h b2"></span>
-  <span class="gb v l1"></span><span class="gb v l2"></span>
-  <span class="gb v r1"></span><span class="gb v r2"></span>
+  <span class="gb ct"></span><span class="gb cb"></span>
+  <span class="gb cl"></span><span class="gb cr"></span>
   <span class="sd t1"></span><span class="sd t2"></span>
   <span class="sd b1"></span><span class="sd b2"></span>
   <span class="sd l1"></span><span class="sd l2"></span>
