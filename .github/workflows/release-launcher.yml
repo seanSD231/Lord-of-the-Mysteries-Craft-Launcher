@@ -11,6 +11,10 @@ name: Release launcher
 on:
   push:
     tags: ["launcher-v*"]
+  # A tag created from the Releases page fires `release`, not `push`, so publishing
+  # through the website would otherwise build nothing at all.
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
