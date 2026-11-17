@@ -3,6 +3,7 @@
   "productName": "Lord of the Mysteries Craft",
   "version": "0.1.0",
   "identifier": "com.lotmcraft.launcher",
+  "mainBinaryName": "lotmcraft-gui",
   "build": {
     "frontendDist": "ui"
   },
