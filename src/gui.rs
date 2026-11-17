@@ -376,7 +376,7 @@ async fn play(
             java: &rt,
             profile: &profile,
             memory_mb,
-            extra_jvm: Vec::new(),
+            extra_jvm: launch::dev_jvm_args(),
             server: Some(SERVER.to_string()),
         };
         let mut cmd = launch::build_command(&opts, &game.natives)?;

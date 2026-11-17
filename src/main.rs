@@ -302,7 +302,7 @@ fn main() -> Result<()> {
             java: &rt,
             profile: &profile,
             memory_mb: args.memory.unwrap_or(4096),
-            extra_jvm: Vec::new(),
+            extra_jvm: launch::dev_jvm_args(),
             server: args.server.clone(),
         };
         let mut cmd = launch::build_command(&opts, &game.natives)?;

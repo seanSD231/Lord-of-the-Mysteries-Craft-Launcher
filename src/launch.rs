@@ -282,6 +282,20 @@ fn extract_natives(natives: &[PathBuf], into: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Extra JVM arguments a dev build passes and a player build does not.
+///
+/// astral_world refuses a singleplayer login unless told otherwise, which is right for
+/// players and tiresome for whoever is testing. A dev build says so on the command line,
+/// so no settings file has to be edited in every throwaway instance -- and a player
+/// build cannot, because this is compiled out of it.
+pub fn dev_jvm_args() -> Vec<String> {
+    if cfg!(feature = "dev-offline") {
+        vec!["-Dastral.allowSingleplayer=true".to_string()]
+    } else {
+        Vec::new()
+    }
+}
+
 pub struct LaunchOptions<'a> {
     pub game_dir: &'a Path,
     pub base: &'a Path,
