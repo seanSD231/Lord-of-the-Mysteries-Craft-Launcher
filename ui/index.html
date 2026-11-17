@@ -22,7 +22,7 @@ html,body { margin:0; height:100%; overflow:hidden; user-select:none;
    short segments punctuating it. Gold diamonds ride that line, the centre one larger
    with an accent core. A thin bronze rectangle sits well inside, with its own corner
    diamonds. */
-.frame { position:absolute; inset:12px; border:3px solid var(--gold);
+.frame { position:absolute; inset:12px; border:2px solid var(--gold);
   border-radius:10px; background:var(--panel);
   display:flex; flex-direction:column;
   box-shadow:0 0 0 1px #30240c, inset 0 0 0 1px rgba(255,220,130,.35); }
@@ -35,43 +35,43 @@ html,body { margin:0; height:100%; overflow:hidden; user-select:none;
     repeating-linear-gradient(-45deg,transparent 0 23px,
       color-mix(in srgb,var(--accent) 22%,transparent) 23px 25px); }
 /* the inner bronze rule, set well in from the gold */
-.frame::before { content:""; position:absolute; inset:17px;
+.frame::before { content:""; position:absolute; inset:11px;
   border:1px solid var(--gold-dim); pointer-events:none; z-index:4; }
 
 /* accent segments on the gold border, two per edge, either side of the ornaments */
 .seg { position:absolute; background:var(--accent); z-index:6; }
-.seg.h { height:3px; width:120px; }
-.seg.v { width:3px; height:120px; }
-.seg.t1{top:-3px;left:calc(50% - 250px)} .seg.t2{top:-3px;left:calc(50% + 130px)}
-.seg.b1{bottom:-3px;left:calc(50% - 250px)} .seg.b2{bottom:-3px;left:calc(50% + 130px)}
-.seg.l1{left:-3px;top:calc(50% - 190px)} .seg.l2{left:-3px;top:calc(50% + 70px)}
-.seg.r1{right:-3px;top:calc(50% - 190px)} .seg.r2{right:-3px;top:calc(50% + 70px)}
+.seg.h { height:2px; width:66px; }
+.seg.v { width:2px; height:66px; }
+.seg.t1{top:-2px;left:calc(50% - 150px)} .seg.t2{top:-2px;left:calc(50% + 84px)}
+.seg.b1{bottom:-2px;left:calc(50% - 150px)} .seg.b2{bottom:-2px;left:calc(50% + 84px)}
+.seg.l1{left:-2px;top:calc(50% - 116px)} .seg.l2{left:-2px;top:calc(50% + 50px)}
+.seg.r1{right:-2px;top:calc(50% - 116px)} .seg.r2{right:-2px;top:calc(50% + 50px)}
 
 /* small gold diamonds on the border, flanking each centre ornament */
-.sd { position:absolute; width:11px; height:11px; background:var(--gold);
+.sd { position:absolute; width:7px; height:7px; background:var(--gold);
   border:1px solid #6b5212; transform:rotate(45deg); z-index:7;
-  box-shadow:inset 0 0 0 2px var(--accent-hi); }
-.sd.t1{top:-7px;left:calc(50% - 106px)} .sd.t2{top:-7px;left:calc(50% + 96px)}
-.sd.b1{bottom:-7px;left:calc(50% - 106px)} .sd.b2{bottom:-7px;left:calc(50% + 96px)}
-.sd.l1{left:-7px;top:calc(50% - 86px)} .sd.l2{left:-7px;top:calc(50% + 76px)}
-.sd.r1{right:-7px;top:calc(50% - 86px)} .sd.r2{right:-7px;top:calc(50% + 76px)}
+  box-shadow:inset 0 0 0 1px var(--accent-hi); }
+.sd.t1{top:-5px;left:calc(50% - 68px)} .sd.t2{top:-5px;left:calc(50% + 61px)}
+.sd.b1{bottom:-5px;left:calc(50% - 68px)} .sd.b2{bottom:-5px;left:calc(50% + 61px)}
+.sd.l1{left:-5px;top:calc(50% - 56px)} .sd.l2{left:-5px;top:calc(50% + 49px)}
+.sd.r1{right:-5px;top:calc(50% - 56px)} .sd.r2{right:-5px;top:calc(50% + 49px)}
 
 /* the centre ornament on each edge: a gold diamond with an accent core */
-.big { position:absolute; width:26px; height:26px; background:var(--gold);
-  border:2px solid #6b5212; transform:rotate(45deg); z-index:8;
+.big { position:absolute; width:16px; height:16px; background:var(--gold);
+  border:1px solid #6b5212; transform:rotate(45deg); z-index:8;
   display:grid; place-items:center; }
-.big::after { content:""; width:10px; height:10px; background:var(--accent);
+.big::after { content:""; width:6px; height:6px; background:var(--accent);
   box-shadow:0 0 5px color-mix(in srgb,var(--accent) 70%,transparent); }
-.big.t{top:-16px;left:calc(50% - 15px)} .big.b{bottom:-16px;left:calc(50% - 15px)}
-.big.l{left:-16px;top:calc(50% - 15px)} .big.r{right:-16px;top:calc(50% - 15px)}
+.big.t{top:-10px;left:calc(50% - 9px)} .big.b{bottom:-10px;left:calc(50% - 9px)}
+.big.l{left:-10px;top:calc(50% - 9px)} .big.r{right:-10px;top:calc(50% - 9px)}
 
 /* gold diamonds on the corners of the inner bronze rule */
-.gd { position:absolute; width:10px; height:10px; background:var(--gold);
+.gd { position:absolute; width:7px; height:7px; background:var(--gold);
   border:1px solid #6b5212; transform:rotate(45deg); z-index:6; }
-.gd.tl{left:17px;top:17px;margin:-6px 0 0 -6px}
-.gd.tr{right:17px;top:17px;margin:-6px -6px 0 0}
-.gd.bl{left:17px;bottom:17px;margin:0 0 -6px -6px}
-.gd.br{right:17px;bottom:17px;margin:0 -6px -6px 0}
+.gd.tl{left:11px;top:11px;margin:-4px 0 0 -4px}
+.gd.tr{right:11px;top:11px;margin:-4px -4px 0 0}
+.gd.bl{left:11px;bottom:11px;margin:0 0 -4px -4px}
+.gd.br{right:11px;bottom:11px;margin:0 -4px -4px 0}
 
 header { position:relative; z-index:2; padding:15px 26px 0;
   display:flex; align-items:center; gap:13px; }
