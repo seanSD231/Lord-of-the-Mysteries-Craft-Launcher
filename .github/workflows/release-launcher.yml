@@ -58,6 +58,28 @@ jobs:
       - name: Stage
         shell: bash
         run: cp "target/release/${{ matrix.bin }}" "${{ matrix.asset }}"
+      # An installer for players: it picks the location, makes the shortcuts, and
+      # appears in Add/Remove Programs. The bare binary stays, because the updater
+      # swaps that file in place and an installer cannot do that.
+      - name: Installer
+        if: matrix.target == 'windows-x64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install tauri-cli --version "^2" --locked || true
+          cargo tauri build --features gui --bundles nsis || true
+          found=$(find target/release/bundle -name "*-setup.exe" | head -1 || true)
+          if [ -n "$found" ]; then
+            cp "$found" "LOTMCraft-Setup.exe"
+            echo "installer: $found"
+          else
+            echo "::warning::no installer was produced"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: matrix.target == 'windows-x64' && hashFiles('LOTMCraft-Setup.exe') != ''
+        with:
+          name: installer
+          path: LOTMCraft-Setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

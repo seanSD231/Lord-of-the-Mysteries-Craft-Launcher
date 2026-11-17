@@ -390,23 +390,62 @@ async fn play(
     .map_err(fail)
 }
 
+/// Where the pack is installed.
+///
+/// Beside the launcher when that folder can be written to, so a portable copy stays
+/// self-contained and a player can move the lot by moving one folder. An installed copy
+/// lives in Program Files, which cannot be written to, so that falls back to the usual
+/// per-user data folder.
+fn pick_root() -> PathBuf {
+    if let Ok(v) = std::env::var("LOTMCRAFT_ROOT") {
+        if !v.trim().is_empty() {
+            return PathBuf::from(v);
+        }
+    }
+    if let Some(dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
+        if writable(&dir) {
+            return dir;
+        }
+    }
+    data_dir().unwrap_or_else(|| PathBuf::from("."))
+}
+
+/// Tries to actually create a file. Permissions on Windows are involved enough that
+/// asking is less reliable than trying.
+fn writable(dir: &std::path::Path) -> bool {
+    let probe = dir.join(".lotmcraft-write-test");
+    match std::fs::write(&probe, b"") {
+        Ok(()) => {
+            let _ = std::fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+fn data_dir() -> Option<PathBuf> {
+    #[cfg(windows)]
+    let base = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
+    #[cfg(target_os = "macos")]
+    let base = std::env::var_os("HOME")
+        .map(|h| PathBuf::from(h).join("Library").join("Application Support"));
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let base = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")));
+
+    let dir = base?.join("LOTMCraft");
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
 fn main() {
     // an earlier update left its predecessor beside us; nothing runs from it now
     update::clean_old();
 
     tauri::Builder::default()
         .setup(|app| {
-            // the instance folder is where the launcher lives, so a player can move the
-            // whole thing by moving one folder
-            let root = std::env::var("LOTMCRAFT_ROOT")
-                .map(PathBuf::from)
-                .ok()
-                .or_else(|| {
-                    std::env::current_exe()
-                        .ok()
-                        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-                })
-                .unwrap_or_else(|| PathBuf::from("."));
+            let root = pick_root();
             app.manage(Ctx {
                 root,
                 manifest: Mutex::new(None),
