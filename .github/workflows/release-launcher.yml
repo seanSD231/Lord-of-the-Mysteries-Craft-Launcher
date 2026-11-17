@@ -34,10 +34,6 @@ jobs:
             target: macos-arm64
             bin: lotmcraft-gui
             asset: lotmcraft-gui-macos-arm64
-          - os: macos-13
-            target: macos-x64
-            bin: lotmcraft-gui
-            asset: lotmcraft-gui-macos-x64
           - os: ubuntu-latest
             target: linux-x64
             bin: lotmcraft-gui
@@ -70,7 +66,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo install tauri-cli --version "^2" --locked || true
           cargo tauri build --features gui --bundles nsis || true
           found=$(find target/release/bundle -name "*-setup.exe" | head -1 || true)
           if [ -n "$found" ]; then
@@ -91,6 +86,7 @@ jobs:
 
   publish:
     needs: build
+    if: always() && needs.build.result != 'cancelled'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -118,7 +114,6 @@ jobs:
             for pair in \
               "windows-x64:lotmcraft-gui-windows-x64.exe" \
               "macos-arm64:lotmcraft-gui-macos-arm64" \
-              "macos-x64:lotmcraft-gui-macos-x64" \
               "linux-x64:lotmcraft-gui-linux-x64"; do
               target="${pair%%:*}"; file="${pair#*:}"
               [ -f "dist/$file" ] || continue
