@@ -43,7 +43,11 @@ jobs:
             target: aarch64-apple-darwin
             name: lotmcraft-macos-arm64
             bin: lotmcraft
-          - os: macos-13
+          # Cross-compiled from the Apple Silicon runner, not built on an Intel one:
+          # GitHub has retired the macos-13 image, so that leg sat queued for ever and
+          # the run never went green. The macOS SDK carries both slices, so an
+          # x86_64-apple-darwin build off macos-latest is the same binary.
+          - os: macos-latest
             target: x86_64-apple-darwin
             name: lotmcraft-macos-x64
             bin: lotmcraft
