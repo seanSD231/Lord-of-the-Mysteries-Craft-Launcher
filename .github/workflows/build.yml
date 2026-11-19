@@ -39,18 +39,18 @@ jobs:
             target: x86_64-pc-windows-msvc
             name: lotmcraft-windows-x64.exe
             bin: lotmcraft.exe
+          # Both mac slices come off this one runner. The Intel image (macos-13) has
+          # been retired, so a leg asking for it queues for ever; and only one macOS job
+          # runs at a time on this account, so a *second* mac leg is cancelled after it
+          # has sat in the queue a quarter of an hour. One job, two targets: the macOS
+          # SDK carries both slices, so the cross-compiled x86_64 binary is the same one
+          # an Intel host would have produced.
           - os: macos-latest
             target: aarch64-apple-darwin
             name: lotmcraft-macos-arm64
             bin: lotmcraft
-          # Cross-compiled from the Apple Silicon runner, not built on an Intel one:
-          # GitHub has retired the macos-13 image, so that leg sat queued for ever and
-          # the run never went green. The macOS SDK carries both slices, so an
-          # x86_64-apple-darwin build off macos-latest is the same binary.
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            name: lotmcraft-macos-x64
-            bin: lotmcraft
+            target2: x86_64-apple-darwin
+            name2: lotmcraft-macos-x64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             name: lotmcraft-linux-x64
@@ -61,19 +61,33 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - name: Second target
+        if: matrix.target2 != ''
+        run: rustup target add ${{ matrix.target2 }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
+      - name: Build the second slice
+        if: matrix.target2 != ''
+        run: cargo build --release --target ${{ matrix.target2 }}
       - name: Stage
         shell: bash
         run: |
           cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "${{ matrix.name }}"
+          if [ -n "${{ matrix.target2 }}" ]; then
+            cp "target/${{ matrix.target2 }}/release/${{ matrix.bin }}" "${{ matrix.name2 }}"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}
+      - uses: actions/upload-artifact@v4
+        if: matrix.target2 != ''
+        with:
+          name: ${{ matrix.name2 }}
+          path: ${{ matrix.name2 }}
 
   # A build with offline profiles enabled, for testing before the Microsoft app is
   # approved. Deliberately not attached to any release: it is an Actions artifact that
