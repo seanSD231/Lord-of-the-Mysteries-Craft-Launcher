@@ -25,9 +25,16 @@ const MC_LOGIN: &str = "https://api.minecraftservices.com/authentication/login_w
 const MC_PROFILE: &str = "https://api.minecraftservices.com/minecraft/profile";
 const SCOPE: &str = "XboxLive.signin offline_access";
 
-/// Set at build time. Register an application in the Azure portal, allow the device-code
-/// flow on it, and put its Application (client) ID here or in LOTMCRAFT_CLIENT_ID.
-const BUILTIN_CLIENT_ID: &str = "";
+/// Our Azure application, approved by Mojang for the Minecraft API on 2026-11-19.
+///
+/// Safe to keep in the open: this is a public client using the device-code flow, so the
+/// id is sent in the clear in every request a player's machine makes and there is no
+/// secret paired with it. `LOTMCRAFT_CLIENT_ID` still wins, for testing against another
+/// registration without a rebuild.
+///
+/// An `Option` rather than an empty string for "unset": clippy reads a const's value, so
+/// `is_empty()` on a filled-in one is a warning, and warnings are errors here.
+const BUILTIN_CLIENT_ID: Option<&str> = Some("b6f64652-1ffe-4083-bc9c-b7f366c9eef7");
 
 pub fn client_id() -> Result<String> {
     if let Ok(v) = std::env::var("LOTMCRAFT_CLIENT_ID") {
@@ -35,8 +42,8 @@ pub fn client_id() -> Result<String> {
             return Ok(v.trim().to_string());
         }
     }
-    if !BUILTIN_CLIENT_ID.is_empty() {
-        return Ok(BUILTIN_CLIENT_ID.to_string());
+    if let Some(v) = BUILTIN_CLIENT_ID {
+        return Ok(v.to_string());
     }
     bail!(
         "no Microsoft client id is configured.\n\
@@ -337,7 +344,7 @@ mod tests {
 
     #[test]
     fn missing_client_id_explains_itself() {
-        if std::env::var("LOTMCRAFT_CLIENT_ID").is_ok() || !BUILTIN_CLIENT_ID.is_empty() {
+        if std::env::var("LOTMCRAFT_CLIENT_ID").is_ok() || BUILTIN_CLIENT_ID.is_some() {
             return;
         }
         let e = client_id().unwrap_err().to_string();
